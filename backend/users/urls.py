@@ -4,14 +4,12 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     signup, UserDetailView, change_password, login, logout, deactivate, 
     UserViewSet, NotificationViewSet, UserNotificationViewSet, 
-    InformationAccountViewSet, TransactionHistoryViewSet
 )
 
 router = DefaultRouter()
 router.register('users', UserViewSet, basename='user')
 router.register('notifications', NotificationViewSet, basename='notification')
 router.register('user-notifications', UserNotificationViewSet, basename='user-notification')
-router.register('transaction-history', TransactionHistoryViewSet, basename='transaction-history')
 
 urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
