@@ -1,16 +1,16 @@
 from django.db import models
 from users.models import User
-from .enums import AssetStatus, AppraiserStatus, AssetAppraiseStatus, AssetMediaType
+from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMediaType
 
 class Appraiser(models.Model):
-    user_id = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
     experiences = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Appraiser: {self.user_id.username}"
+        return f"Appraiser: {self.user.first_name} {self.user.last_name}"
 
 class Asset(models.Model):
     name = models.CharField(max_length=255)
@@ -19,7 +19,7 @@ class Asset(models.Model):
     size = models.CharField(max_length=100)
     origin = models.CharField(max_length=255)
     status = models.CharField(max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING)
-    appraise_status = models.CharField(max_length=50, choices=AssetAppraiseStatus.choices, default=AssetAppraiseStatus.NOT_APPRAISED)
+    appraise_status = models.CharField(max_length=50, choices=AssetAppraisalStatus.choices, default=AssetAppraisalStatus.NOT_APPRAISED)
     initial_price = models.DecimalField(max_digits=12, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assets_for_sale')
@@ -34,10 +34,13 @@ class Asset(models.Model):
     def __str__(self):
         return self.name
 
+def asset_media_upload_to(instance, filename):
+    return f"asset_media/{instance.asset.id}/{filename}"
+
 class AssetMedia(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='media')
     media_type = models.CharField(max_length=20, choices=AssetMediaType.choices)
-    file = models.FileField(upload_to="asset_media/")
+    file = models.FileField(upload_to=asset_media_upload_to)
     is_primary = models.BooleanField(default=False)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)

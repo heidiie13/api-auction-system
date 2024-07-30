@@ -1,8 +1,9 @@
 from django.db import models
 
-class AssetAppraiseStatus(models.TextChoices):
-    NOT_APPRAISED = 'not_appraised', 'Not appraised'
-    APPRAISED = 'appraised', 'Appraised'
+class AssetAppraisalStatus(models.TextChoices):
+    NOT_APPRAISED = 'not_appraised', 'Not Appraised'
+    APPRAISAL_SUCCESSFUL = 'appraisal_successful', 'Appraisal Successful'
+    APPRAISAL_FAILED = 'appraisal_failed', 'Appraisal Failed'
 
 class AssetStatus(models.TextChoices):
     PENDING = 'pending', 'Pending'
