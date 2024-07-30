@@ -48,8 +48,7 @@ class User(AbstractUser):
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True)
-    credibility = models.IntegerField(
-        default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    credibility = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     identification_card = models.CharField(max_length=50, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)

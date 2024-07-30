@@ -3,14 +3,14 @@ from users.models import User
 from .enums import AssetStatus, AppraiserStatus, AssetAppraiseStatus, AssetMediaType
 
 class Appraiser(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile')
+    user_id = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
     experiences = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Appraiser: {self.user.username}"
+        return f"Appraiser: {self.user_id.username}"
 
 class Asset(models.Model):
     name = models.CharField(max_length=255)
