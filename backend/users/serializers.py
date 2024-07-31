@@ -13,9 +13,9 @@ class AdminUserSerializer(serializers.ModelSerializer):
 class StaffUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone', 'another_phone',  'identification_card',
-                  'gender', 'country', 'city', 'state', 'avatar', 'created_date', 'modified_date']
-        read_only_fields = ['email', 'role', 'created_date', 'modified_date']
+        fields = ['email','first_name', 'last_name', 'role', 'date_of_birth', 'phone', 'another_phone',  'identification_card',
+                  'gender', 'country', 'city', 'state', 'avatar', 'created_date', 'modified_date', 'is_active']
+        read_only_fields = ['email', 'role', 'created_date', 'modified_date', 'is_active']
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -24,10 +24,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'last_name', 'role', 'date_of_birth', 'phone',
             'another_phone', 'gender', 'country', 'city', 'state', 'avatar',
-            'credibility', 'identification_card', 'created_date', 'modified_date'
+            'credibility', 'identification_card', 'created_date', 'modified_date', 'is_active'
         ]
         read_only_fields = ['id', 'role', 'credibility',
-                            'created_date', 'modified_date']
+                            'created_date', 'modified_date', 'is_active']
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -112,4 +112,5 @@ class UserNotificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserNotification
-        fields = ['id', 'notification', 'is_read', 'read_date']
+        fields = ['id', 'notification', 'is_read', 'read_date', 'sent_date']
+        read_only_fields = ['sent_date',]

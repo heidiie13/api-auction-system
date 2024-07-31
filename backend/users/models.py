@@ -94,9 +94,10 @@ class UserNotification(models.Model):
     notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
     is_read = models.BooleanField(default=False)
     read_date = models.DateTimeField(null=True, blank=True)
-
+    sent_date = models.DateTimeField()
+    
     class Meta:
-        unique_together = ('user', 'notification')
-
+        ordering = ['-sent_date']
+        
     def __str__(self):
         return f"{self.user.email} - {self.notification.title}"

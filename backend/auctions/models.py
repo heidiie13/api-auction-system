@@ -1,10 +1,11 @@
+from decimal import Decimal
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from users.models import User
 from assets.models import Asset
 from assets.enums import AssetStatus
-from .enums import AuctionStatus, AuctionParticipantStatus, BidStatus, FeeType, ContractStatus, PaymentStatus, TransactionStatus, TransactionType
+from .enums import AuctionStatus, FeeType, ContractStatus, PaymentStatus, TransactionStatus, TransactionType
 
 class Auction(models.Model):
     name = models.CharField(max_length=255)
@@ -12,11 +13,8 @@ class Auction(models.Model):
     address = models.TextField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=AuctionStatus.choices, default=AuctionStatus.PENDING)
+    status = models.CharField(max_length=20, choices=AuctionStatus.choices, default=AuctionStatus.UPCOMING)
     auctioneer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organized_auctions')
-    starting_price = models.DecimalField(max_digits=12, decimal_places=2)
-    bid_increment = models.DecimalField(max_digits=10, decimal_places=2)
-    final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
@@ -42,9 +40,6 @@ class Auction(models.Model):
 class AuctionParticipant(models.Model):
     auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='participants')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='joined_auctions')
-    deposit = models.DecimalField(max_digits=12, decimal_places=2)
-    deposit_date = models.DateTimeField()
-    status = models.CharField(max_length=10, choices=AuctionParticipantStatus.choices)
     join_time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -59,7 +54,6 @@ class AuctionItem(models.Model):
     starting_price = models.DecimalField(max_digits=12, decimal_places=2)
     current_price = models.DecimalField(max_digits=12, decimal_places=2)
     final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=AuctionStatus.choices, default=AuctionStatus.PENDING)
     bid_count = models.PositiveIntegerField(default=0)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
@@ -68,18 +62,31 @@ class AuctionItem(models.Model):
         return f"{self.asset.name} in {self.auction.name}"
 
     def save(self, *args, **kwargs):
+        if not self.current_price:
+            self.current_price = self.starting_price
         super().save(*args, **kwargs)
         if self.status == AuctionStatus.FINISHED and self.final_price:
             self.asset.status = AssetStatus.SOLD
             self.asset.save()
 
+class AuctionItemParticipant(models.Model):
+    auction_item = models.ForeignKey(AuctionItem, on_delete=models.CASCADE, related_name='item_participants')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deposit_items')
+    deposit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    deposit_date = models.DateTimeField(auto_now_add=True) 
+
+    class Meta:
+        unique_together = ('auction_item', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} deposited for {self.auction_item.asset.name} with deposit {self.deposit}"
+    
 class Bid(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bids')
     auction_item = models.ForeignKey(AuctionItem, on_delete=models.CASCADE, related_name='bids')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    time = models.DateTimeField(auto_now_add=True)
+    created_date = models.DateTimeField(auto_now_add=True)
     is_current_highest = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=BidStatus.choices, default=BidStatus.VALID)
 
     def clean(self):
         if self.amount <= self.auction_item.current_price:

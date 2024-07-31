@@ -6,8 +6,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
+from django.db import transaction
 from .serializers import (UserSerializer, SignUpSerializer, ChangePasswordSerializer,
-                          NotificationSerializer, UserNotificationSerializer, AdminUserSerializer,StaffUserSerializer)
+                          NotificationSerializer, UserNotificationSerializer, AdminUserSerializer, StaffUserSerializer)
 from .permissions import IsAdminUser, IsStaffUser
 from .models import Notification, UserNotification
 
@@ -158,7 +159,39 @@ class UserViewSet(viewsets.ModelViewSet):
 class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsStaffUser]
+
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def send_to_users(self, request, pk=None):
+        notification = self.get_object()
+        user_ids = request.data.get('user_ids')
+
+        if not isinstance(user_ids, list) or not all(isinstance(uid, int) for uid in user_ids):
+            return Response({
+                "error": "Invalid user_ids format. Expected a list of integers."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        users = User.objects.filter(id__in=user_ids)
+        if not users:
+            return Response({
+                "message": "No users found for the provided user_ids.",
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        user_notifications = [
+            UserNotification(
+                user=user,
+                notification=notification,
+                is_read=False,
+                sent_date=timezone.now()
+            ) for user in users
+        ]
+
+        UserNotification.objects.bulk_create(user_notifications)
+
+        return Response({
+            "message": f"Notification sent to {len(user_notifications)} users",
+        }, status=status.HTTP_201_CREATED)
 
 
 class UserNotificationViewSet(viewsets.ReadOnlyModelViewSet):
