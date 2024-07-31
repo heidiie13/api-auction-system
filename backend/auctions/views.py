@@ -1,29 +1,28 @@
-# from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status
 # from rest_framework.decorators import action
 # from rest_framework.response import Response
 # from django.utils import timezone
 # from django.db import transaction
-# from users.permissions import IsAdminUser, IsStaffUser
+from .models import Auction
+from .serializers import AuctionSerializer
+from users.permissions import IsAdminUser, IsStaffUser
 # from users.models import User
 # from assets.models import Asset
-# from .models import Auction, UserHasAuction, Holiday, AuctionHasAsset, Bid, Fee, Contract, Tax, TaxHasContract
-# from .serializers import AuctionSerializer, UserHasAuctionSerializer, HolidaySerializer, AuctionHasAssetSerializer, BidSerializer, FeeSerializer, ContractSerializer, TaxSerializer, TaxHasContractSerializer
-# from .enums import UserHasAuctionStatus
 # from assets.enums import AssetStatus, PropertyStatus
 
 
-# class AuctionViewSet(viewsets.ModelViewSet):
-#     queryset = Auction.objects.all()
-#     serializer_class = AuctionSerializer
+class AuctionViewSet(viewsets.ModelViewSet):
+    queryset = Auction.objects.all()
+    serializer_class = AuctionSerializer
 
-#     def get_permissions(self):
-#         if self.action in ['list', 'retrieve']:
-#             permission_classes = [permissions.AllowAny]
-#         elif self.action in ['create', 'update', 'partial_update', 'destroy', 'add_asset_to_auction']:
-#             permission_classes = [IsStaffUser]
-#         else:
-#             permission_classes = [permissions.IsAuthenticated]
-#         return [permission() for permission in permission_classes]
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.AllowAny]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'add_asset_to_auction']:
+            permission_classes = [IsStaffUser]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
 #     @action(detail=True, methods=['post'])
 #     @transaction.atomic

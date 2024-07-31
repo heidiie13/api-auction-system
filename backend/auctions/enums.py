@@ -1,27 +1,10 @@
 from django.db import models
 
 class AuctionStatus(models.TextChoices):
-    PENDING = 'pending', 'Pending'
+    UPCOMING = 'upcoming', 'Upcoming'
     ACTIVE = 'active', 'Active'
     FINISHED = 'finished', 'Finished'
     CANCELLED = 'cancelled', 'Cancelled'
-    
-class AuctionStatus(models.TextChoices):
-    PENDING = 'pending', 'Pending'
-    ACTIVE = 'active', 'Active'
-    FINISHED = 'finished', 'Finished'
-    CANCELLED = 'cancelled', 'Cancelled'
-
-class AuctionParticipantStatus(models.TextChoices):
-    PENDING = 'pending', 'Pending'
-    APPROVED = 'approved', 'Approved'
-    REJECTED = 'rejected', 'Rejected'
-
-class BidStatus(models.TextChoices):
-    VALID = 'valid', 'Valid'
-    INVALID = 'invalid', 'Invalid'
-    OUTBID = 'outbid', 'Outbid'
-    WINNING = 'winning', 'Winning'
 
 class FeeType(models.TextChoices):
     REGISTRATION = 'registration', 'Registration'

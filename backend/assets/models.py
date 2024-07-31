@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from users.models import User
 from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMediaType
@@ -20,7 +21,7 @@ class Asset(models.Model):
     origin = models.CharField(max_length=255)
     status = models.CharField(max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING)
     appraise_status = models.CharField(max_length=50, choices=AssetAppraisalStatus.choices, default=AssetAppraisalStatus.NOT_APPRAISED)
-    initial_price = models.DecimalField(max_digits=12, decimal_places=2)
+    initial_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     quantity = models.PositiveIntegerField(default=1)
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assets_for_sale')
     winner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='won_assets')
