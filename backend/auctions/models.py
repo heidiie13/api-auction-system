@@ -4,22 +4,20 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from users.models import User
 from assets.models import Asset
-from assets.enums import AssetStatus
-from .enums import AuctionStatus, FeeType, ContractStatus, PaymentStatus, TransactionStatus, TransactionType
+from assets.enums import AssetStatus, AssetAppraisalStatus
+from .enums import AuctionStatus, FeeType, ContractStatus, PaymentStatus, TransactionStatus, TransactionType, TaxType
 
 class Auction(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
-    address = models.TextField()
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    start_at = models.DateTimeField()
+    end_at = models.DateTimeField()
     status = models.CharField(max_length=20, choices=AuctionStatus.choices, default=AuctionStatus.UPCOMING)
-    auctioneer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organized_auctions')
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
-        if self.end_time <= self.start_time:
+        if self.end_at <= self.start_at:
             raise ValidationError("End time must be after start time.")
 
     def save(self, *args, **kwargs):
@@ -28,145 +26,229 @@ class Auction(models.Model):
 
     def update_status(self):
         now = timezone.now()
-        if self.start_time <= now < self.end_time:
+        if self.start_at <= now < self.end_at:
             self.status = AuctionStatus.ACTIVE
-        elif now >= self.end_time:
+        elif now >= self.end_at:
             self.status = AuctionStatus.FINISHED
         self.save()
 
     def __str__(self):
         return self.name
 
-class AuctionParticipant(models.Model):
-    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='participants')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='joined_auctions')
-    join_time = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('auction', 'user')
-
-    def __str__(self):
-        return f"{self.user.username} in {self.auction.name}"
-
-class AuctionItem(models.Model):
-    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='items')
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='auction_entries')
+class AuctionAsset(models.Model):
+    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='assets')
+    asset = models.OneToOneField(Asset, on_delete=models.CASCADE, related_name='auction_entry')
     starting_price = models.DecimalField(max_digits=12, decimal_places=2)
     current_price = models.DecimalField(max_digits=12, decimal_places=2)
     final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     bid_count = models.PositiveIntegerField(default=0)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if self.asset.appraise_status != AssetAppraisalStatus.APPRAISAL_SUCCESSFUL:
+            raise ValidationError("Only successfully appraised assets can be added to an auction.")
+        if self.asset.status != AssetStatus.PENDING:
+            raise ValidationError("Only pending assets can be added to an auction.")
+
+    def save(self, *args, **kwargs):
+        if not self.starting_price:
+            self.starting_price = self.asset.appraised_value
+        if not self.current_price:
+            self.current_price = self.starting_price
+        self.full_clean()
+        super().save(*args, **kwargs)
+        if self.final_price:
+            self.asset.status = AssetStatus.SOLD
+            self.asset.save()
 
     def __str__(self):
         return f"{self.asset.name} in {self.auction.name}"
 
-    def save(self, *args, **kwargs):
-        if not self.current_price:
-            self.current_price = self.starting_price
-        super().save(*args, **kwargs)
-        if self.status == AuctionStatus.FINISHED and self.final_price:
-            self.asset.status = AssetStatus.SOLD
-            self.asset.save()
-
-class AuctionItemParticipant(models.Model):
-    auction_item = models.ForeignKey(AuctionItem, on_delete=models.CASCADE, related_name='item_participants')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deposit_items')
-    deposit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
-    deposit_date = models.DateTimeField(auto_now_add=True) 
+class AssetDeposit(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deposits')
+    auction_asset = models.ForeignKey(AuctionAsset, on_delete=models.CASCADE, related_name='deposits')
+    percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('auction_item', 'user')
+        unique_together = ('user', 'auction_asset')
 
     def __str__(self):
-        return f"{self.user.username} deposited for {self.auction_item.asset.name} with deposit {self.deposit}"
+        return f"Deposit for {self.auction_asset.asset.name} by {self.user}"
+
+    def save(self, *args, **kwargs):
+        self.amount = (self.percentage / 100) * self.auction_asset.starting_price
+        super().save(*args, **kwargs)
     
 class Bid(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bids')
-    auction_item = models.ForeignKey(AuctionItem, on_delete=models.CASCADE, related_name='bids')
+    auction_asset = models.ForeignKey(AuctionAsset, on_delete=models.CASCADE, related_name='bids')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    created_date = models.DateTimeField(auto_now_add=True)
     is_current_highest = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-amount']
+        
     def clean(self):
-        if self.amount <= self.auction_item.current_price:
+        if self.amount <= self.auction_asset.current_price:
             raise ValidationError("Bid amount must be higher than current price.")
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
 
+        if self.is_current_highest:
+            self.auction_asset.current_price = self.amount
+            self.auction_asset.save()
+            Bid.objects.filter(auction_asset=self.auction_asset).exclude(pk=self.pk).update(is_current_highest=False)
+            
     def __str__(self):
-        return f"Bid of {self.amount} by {self.user.username} for {self.auction_item.asset.name}"
+        return f"Bid of {self.amount} by {self.user.username} for {self.auction_asset.asset.name}"
 
 class Fee(models.Model):
-    auction_item = models.ForeignKey(AuctionItem, on_delete=models.CASCADE, related_name='fees')
     name = models.CharField(max_length=255)
     fee_type = models.CharField(max_length=50, choices=FeeType.choices)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_status = models.BooleanField(default=False)
-    payment_date = models.DateTimeField(null=True, blank=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
-
+    is_percentage = models.BooleanField(default=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     def __str__(self):
-        return f"{self.name} for {self.auction_item.asset.name}"
+        return f"{self.name} ({self.get_fee_type_display()})"
+        
+    def clean(self):
+        if self.is_percentage and (self.amount < 0 or self.amount > 100):
+            raise ValidationError("Percentage amount must be between 0 and 100.")
+        if not self.is_percentage and self.amount < 0:
+            raise ValidationError("Amount cannot be negative.")
 
-class Contract(models.Model):
-    auction_item = models.OneToOneField(AuctionItem, on_delete=models.CASCADE, related_name='contract')
-    name = models.CharField(max_length=255)
-    date = models.DateTimeField()
-    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    winner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='won_contracts')
-    status = models.CharField(max_length=20, choices=ContractStatus.choices, default=ContractStatus.PENDING)
-    payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Contract for {self.auction_item.asset.name}"
-
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+        
 class Tax(models.Model):
     name = models.CharField(max_length=255)
-    tax_type = models.CharField(max_length=50)
-    rate = models.DecimalField(max_digits=5, decimal_places=2)
+    tax_type = models.CharField(max_length=50, choices=TaxType.choices)
+    is_percentage = models.BooleanField(default=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     description = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
-
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.get_tax_type_display()})"
+    
+    def clean(self):
+        if self.is_percentage and (self.amount < 0 or self.amount > 100):
+            raise ValidationError("Percentage amount must be between 0 and 100.")
+        if not self.is_percentage and self.amount < 0:
+            raise ValidationError("Amount cannot be negative.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+class Contract(models.Model):
+    name = models.CharField(max_length=255)
+    auction_asset = models.OneToOneField(AuctionAsset, on_delete=models.CASCADE, related_name='contract')
+    winner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='won_contracts')
+    seller = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sold_contracts')
+    status = models.CharField(max_length=20, choices=ContractStatus.choices, default=ContractStatus.PENDING)
+    tax_payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID)
+    fee_payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID)
+    payment_due_date = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def update_status(self):
+        if self.tax_payment_status == PaymentStatus.PAID and self.fee_payment_status == PaymentStatus.PAID:
+            self.status = ContractStatus.COMPLETED
+        self.save()
+        
+    @property
+    def final_price(self):
+        return self.auction_asset.final_price
+
+    @property
+    def total_fees(self):
+        return sum(cf.amount for cf in self.contract_fees.all())
+
+    @property
+    def total_taxes(self):
+        return sum(ct.amount for ct in self.contract_taxes.all())
+    
+    @property
+    def winner_amount_due(self):
+        return self.final_price + self.total_taxes
+
+    @property
+    def seller_amount_due(self):
+        return self.total_fees
+
+    @property
+    def total_amount_due(self):
+        return self.winner_amount_due + self.seller_amount_due
+    
+    def __str__(self):
+        return f"Contract for {self.auction_asset.asset.name}"
+        
+class ContractFee(models.Model):
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='contract_fees')
+    fee = models.ForeignKey(Fee, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def calculate_amount(self):
+        if self.fee.is_percentage:
+            return (self.contract.final_price * self.fee.amount) / 100
+        return self.fee.amount
+    
+    def update_amount(self):
+        self.amount = self.calculate_amount()
+        self.save()
+        
+    def __str__(self):
+        return f"{self.fee} for {self.contract}"
 
 class ContractTax(models.Model):
-    tax = models.ForeignKey(Tax, on_delete=models.CASCADE, related_name='contract_taxes')
-    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='taxes')
+    contract = models.ForeignKey(Contract, on_delete=models.CASCADE, related_name='contract_taxes')
+    tax = models.ForeignKey(Tax, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"{self.tax.name} for {self.contract.name}"
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
+    def calculate_amount(self):
+        if self.tax.is_percentage:
+            return (self.contract.final_price * self.tax.amount) / 100
+        return self.tax.amount
+    
+    def update_amount(self):
+        self.amount = self.calculate_amount()
+        self.save()
+        
+    def __str__(self):
+        return f"{self.tax} for {self.contract}"
+
     
 class TransactionHistory(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions')
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='transactions')
     transaction_type = models.CharField(max_length=20, choices=TransactionType.choices)
     status = models.CharField(max_length=20, choices=TransactionStatus.choices, default=TransactionStatus.PENDING)
     description = models.TextField()
-    sender_account = models.CharField(max_length=50)
-    sender_bank = models.CharField(max_length=100)
-    sender_name = models.CharField(max_length=100)
-    recipient_account = models.CharField(max_length=50)
-    recipient_bank = models.CharField(max_length=100, blank=True)
-    recipient_name = models.CharField(max_length=100)
+    contract = models.ForeignKey(Contract, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
     auction = models.ForeignKey(Auction, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
-    auction_item = models.ForeignKey(AuctionItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
+    auction_asset = models.ForeignKey(AuctionAsset, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions')
     note = models.TextField(blank=True)
-    transaction_date = models.DateTimeField()
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.transaction_type} - {self.amount} - {self.user.email}"
+        return f"{self.transaction_type} - {self.user.email}"

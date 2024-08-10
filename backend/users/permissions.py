@@ -1,6 +1,5 @@
 from rest_framework import permissions
 from .enums import UserRole
-from .models import User
 
 class IsAdminUser(permissions.BasePermission):
     def has_permission(self, request, view):
