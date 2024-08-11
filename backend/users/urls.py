@@ -19,6 +19,6 @@ urlpatterns = [
     path('request-reset-password/', request_reset_password, name='request_reset_password'),
     path('reset-password/<uidb64>/<token>/', reset_password, name='reset_password'),
     path('users/me/change-password/', change_password, name='change-password'),
-    path('users/me/', UserDetailView.as_view(), name='user-detail'),
+    path('users/me/', UserDetailView.as_view(), name='user_detail'),
     path('', include(router.urls)),
 ]
