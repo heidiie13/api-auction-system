@@ -13,27 +13,55 @@ class Appraiser(models.Model):
     def __str__(self):
         return f"Appraiser: {self.user.first_name} {self.user.last_name}"
 
+
 class Asset(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
     asset_type = models.CharField(max_length=255)
     size = models.CharField(max_length=100)
     origin = models.CharField(max_length=255)
-    status = models.CharField(max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING)
-    appraise_status = models.CharField(max_length=50, choices=AssetAppraisalStatus.choices, default=AssetAppraisalStatus.NOT_APPRAISED)
-    initial_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    status = models.CharField(
+        max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING
+    )
+    appraise_status = models.CharField(
+        max_length=50,
+        choices=AssetAppraisalStatus.choices,
+        default=AssetAppraisalStatus.NOT_APPRAISED,
+    )
+    initial_price = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00")
+    )
     quantity = models.PositiveIntegerField(default=1)
-    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assets_for_sale')
-    winner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='won_assets')
-    warehouse = models.ForeignKey('WareHouse', on_delete=models.SET_NULL, null=True, blank=True)
-    appraiser = models.ForeignKey(Appraiser, on_delete=models.SET_NULL, null=True, blank=True, related_name='appraised_assets')
-    appraised_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    seller = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="assets_for_sale"
+    )
+    winner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="won_assets",
+    )
+    warehouse = models.ForeignKey(
+        "WareHouse", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    appraiser = models.ForeignKey(
+        Appraiser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="appraised_assets",
+    )
+    appraised_value = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
     appraisal_date = models.DateTimeField(null=True, blank=True)
     created_date = models.DateTimeField(auto_now_add=True)
     modified_date = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
 
 def asset_media_upload_to(instance, filename):
     return f"asset_media/{instance.asset.id}/{filename}"
