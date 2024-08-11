@@ -17,7 +17,7 @@ class Appraiser(models.Model):
 class Asset(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
-    category = models.CharField(max_length=100, choices=AssetCategory.choice)
+    category = models.CharField(max_length=100, choices=AssetCategory.choices, default=AssetCategory.OTHERS)
     size = models.CharField(max_length=100)
     warehouse = models.CharField(max_length=255)
     origin = models.CharField(max_length=255)
