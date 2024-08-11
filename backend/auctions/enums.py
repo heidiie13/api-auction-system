@@ -6,22 +6,29 @@ class AuctionStatus(models.TextChoices):
     FINISHED = 'finished', 'Finished'
     CANCELLED = 'cancelled', 'Cancelled'
 
-class FeeType(models.TextChoices):
-    REGISTRATION = 'registration', 'Registration'
-    COMMISSION = 'commission', 'Commission'
-    OTHER = 'other', 'Other'
-
 class ContractStatus(models.TextChoices):
     PENDING = 'pending', 'Pending'
-    SIGNED = 'signed', 'Signed'
+    ACTIVE = 'active', 'Active'
     COMPLETED = 'completed', 'Completed'
     CANCELLED = 'cancelled', 'Cancelled'
 
 class PaymentStatus(models.TextChoices):
     UNPAID = 'unpaid', 'Unpaid'
-    PARTIALLY_PAID = 'partially_paid', 'Partially Paid'
     PAID = 'paid', 'Paid'
     
+class TaxType(models.TextChoices):
+    IMPORT = 'import', 'Import Tax'
+    VAT = 'vat', 'Value Added Tax'
+    INCOME = 'income', 'Personal Income Tax'
+    SALES = 'sales', 'Sales Tax'
+
+class FeeType(models.TextChoices):
+    COMMISSION = 'commission', 'Commission Fee'
+    LISTING = 'listing', 'Listing Fee'
+    INSURANCE = 'insurance', 'Insurance Fee'
+    SHIPPING = 'shipping', 'Shipping Fee'
+    OTHER = 'other', 'Other Service Fee'
+
 class TransactionType(models.TextChoices):
     DEPOSIT = 'deposit', 'Deposit'
     WITHDRAWAL = 'withdrawal', 'Withdrawal'

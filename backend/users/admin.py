@@ -11,11 +11,11 @@ class CustomUserAdmin(UserAdmin):
     model = User
     list_display = ("id", "email", "first_name",
                     "last_name", "role", "is_active")
-    list_filter = ("role", "is_active", "created_date")
+    list_filter = ("role", "is_active", "created_at", "updated_at")
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal info", {"fields": ("first_name", "last_name", "date_of_birth", "phone", "another_phone",
-         "gender", "country", "city", "state", "avatar", "credibility", "identification_card")}),
+         "gender", "country", "city", "state", "avatar", "identification_card")}),
         ("Permissions", {"fields": ("is_active", "role", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login",)}),
     )
@@ -28,8 +28,8 @@ class CustomUserAdmin(UserAdmin):
          ),
     )
     search_fields = ("email", "first_name", "last_name")
-    ordering = ("-created_date",)
-    readonly_fields = ("created_date",)
+    ordering = ("-updated_at", "-created_at",)
+    readonly_fields = ("created_at","updated_at")
     list_per_page = 10
 
 

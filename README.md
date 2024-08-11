@@ -35,6 +35,8 @@ This is the backend for the American Auction system, built with Django Rest Fram
     DB_PASSWORD=root
     DB_HOST=db
     DB_PORT=3306
+    EMAIL_ACCOUNT=your email
+    EMAIL_PASSWORD=your app password email
 
     ADMIN_EMAIL=admin@gmail.com
     ADMIN_PASSWORD=1234root
@@ -52,6 +54,6 @@ This is the backend for the American Auction system, built with Django Rest Fram
 
 6. Access API docs (Swagger), Admin site:
 
-    http://localhost:8000/swagger/
+    http://127.0.0.1:8000/swagger/
 
-    http://localhost:8000/admin/
+    http://127.0.0.1:8000/admin/

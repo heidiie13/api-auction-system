@@ -1,150 +1,163 @@
 from rest_framework import viewsets, permissions, status
-# from rest_framework.decorators import action
-# from rest_framework.response import Response
-# from django.utils import timezone
-# from django.db import transaction
-from .models import Auction
-from .serializers import AuctionSerializer
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from django.core.exceptions import ValidationError
+from .models import Auction, AuctionAsset, AssetDeposit, Bid, Fee, Tax, Contract, ContractFee, ContractTax, TransactionHistory
+from .serializers import AuctionSerializer, AuctionAssetSerializer, AssetDepositSerializer, BidSerializer, FeeSerializer, TaxSerializer, ContractSerializer, ContractFeeSerializer, ContractTaxSerializer, TransactionHistorySerializer
 from users.permissions import IsAdminUser, IsStaffUser
-# from users.models import User
-# from assets.models import Asset
-# from assets.enums import AssetStatus, PropertyStatus
-
+from assets.models import Asset, AssetStatus, AssetAppraisalStatus
 
 class AuctionViewSet(viewsets.ModelViewSet):
     queryset = Auction.objects.all()
     serializer_class = AuctionSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            permission_classes = [permissions.AllowAny]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'add_asset_to_auction']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsStaffUser]
         else:
             permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
 
-#     @action(detail=True, methods=['post'])
-#     @transaction.atomic
-#     def add_asset_to_auction(self, request, pk=None):
-#         auction = self.get_object()
-#         asset_id = request.data.get('asset_id')
-#         starting_price = request.data.get('starting_price')
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        auction = self.get_object()
+        auction.update_status()
+        return Response({'status': 'Auction status updated'})
 
-#         if not asset_id or not starting_price:
-#             return Response({"error": "Asset ID and starting price are required"}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['post'])
+    def create_auction_with_assets(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        auction = serializer.save()
 
-#         try:
-#             asset = Asset.objects.get(id=asset_id)
-#         except Asset.DoesNotExist:
-#             return Response({"error": "Asset not found"}, status=status.HTTP_404_NOT_FOUND)
+        available_assets = Asset.objects.filter(
+            status=AssetStatus.PENDING,
+            appraise_status=AssetAppraisalStatus.APPRAISAL_SUCCESSFUL
+        ).order_by('created_date')[:auction.max_assets]
 
-#         if asset.asset_status != AssetStatus.ACTIVE or asset.property_status != PropertyStatus.AVAILABLE:
-#             return Response({"error": "Asset must be active and available"}, status=status.HTTP_400_BAD_REQUEST)
+        for asset in available_assets:
+            AuctionAsset.objects.create(auction=auction, asset=asset)
 
-#         auction_has_asset = AuctionHasAsset.objects.create(
-#             id_auction=auction,
-#             id_asset=asset,
-#             starting_price=starting_price,
-#             current_price=starting_price
-#         )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-#         serializer = AuctionHasAssetSerializer(auction_has_asset)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+class AuctionAssetViewSet(viewsets.ModelViewSet):
+    queryset = AuctionAsset.objects.all()
+    serializer_class = AuctionAssetSerializer
+    permission_classes = [IsStaffUser]
 
-#     @action(detail=True, methods=['post'])
-#     def join_auction(self, request, pk=None):
-#         auction = self.get_object()
-#         user = request.user
-#         deposits = request.data.get('deposits')
+    @action(detail=False, methods=['post'])
+    def add_asset_to_auction(self, request):
+        asset_id = request.data.get('asset_id')
+        auction_id = request.data.get('auction_id')
+
+        try:
+            asset = Asset.objects.get(id=asset_id, status=AssetStatus.PENDING, appraise_status=AssetAppraisalStatus.APPRAISAL_SUCCESSFUL)
+            auction = Auction.objects.get(id=auction_id)
+        except (Asset.DoesNotExist, Auction.DoesNotExist):
+            return Response({'error': 'Invalid asset or auction'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if auction.assets.count() >= auction.max_assets:
+            return Response({'error': 'Auction has reached maximum number of assets'}, status=status.HTTP_400_BAD_REQUEST)
+
+        auction_asset = AuctionAsset.objects.create(auction=auction, asset=asset)
+        serializer = self.get_serializer(auction_asset)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class AssetDepositViewSet(viewsets.ModelViewSet):
+    queryset = AssetDeposit.objects.all()
+    serializer_class = AssetDepositSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [permissions.IsAuthenticated]
+        elif self.action in ['create']:
+            permission_classes = [permissions.IsAuthenticated]
+        else:
+            permission_classes = [IsStaffUser]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class BidViewSet(viewsets.ModelViewSet):
+    queryset = Bid.objects.all()
+    serializer_class = BidSerializer
+
+    def get_permissions(self):
+        if self.action in ['create']:
+            permission_classes = [permissions.IsAuthenticated]
+        else:
+            permission_classes = [IsStaffUser]
+        return [permission() for permission in permission_classes]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        auction_asset = serializer.validated_data['auction_asset']
         
-#         if not deposits:
-#             return Response({"error": "Deposits amount is required"}, status=status.HTTP_400_BAD_REQUEST)
+        # Check if user has an approved deposit for this auction asset
+        if not AssetDeposit.objects.filter(user=user, auction_asset=auction_asset, is_approved=True).exists():
+            raise ValidationError("You must have an approved deposit to bid on this asset.")
 
-#         user_has_auction, created = UserHasAuction.objects.get_or_create(
-#             id_auction=auction,
-#             id_user=user,
-#             defaults={
-#                 'deposits': deposits,
-#                 'deposits_date': timezone.now(),
-#                 'user_has_auction_status': UserHasAuctionStatus.JOIN
-#             }
-#         )
+        # Check if the bid amount is higher than the current price
+        if serializer.validated_data['amount'] <= auction_asset.current_price:
+            raise ValidationError("Bid amount must be higher than the current price.")
+
+        serializer.save(user=user)
         
-#         if created:
-#             auction.number_of_participants += 1
-#             auction.save()
-        
-#         serializer = UserHasAuctionSerializer(user_has_auction)
-#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+        # Update the auction asset's current price and bid count
+        auction_asset.current_price = serializer.validated_data['amount']
+        auction_asset.bid_count += 1
+        auction_asset.save()
 
+class FeeViewSet(viewsets.ModelViewSet):
+    queryset = Fee.objects.all()
+    serializer_class = FeeSerializer
+    permission_classes = [IsAdminUser]
 
-# class UserHasAuctionViewSet(viewsets.ModelViewSet):
-#     queryset = UserHasAuction.objects.all()
-#     serializer_class = UserHasAuctionSerializer
-#     permission_classes = [IsAdminUser | IsStaffUser]
+class TaxViewSet(viewsets.ModelViewSet):
+    queryset = Tax.objects.all()
+    serializer_class = TaxSerializer
+    permission_classes = [IsAdminUser]
 
-# class HolidayViewSet(viewsets.ModelViewSet):
-#     queryset = Holiday.objects.all()
-#     serializer_class = HolidaySerializer
-#     permission_classes = [IsAdminUser | IsStaffUser]
+class ContractViewSet(viewsets.ModelViewSet):
+    queryset = Contract.objects.all()
+    serializer_class = ContractSerializer
+    permission_classes = [IsStaffUser]
 
-# class AuctionHasAssetViewSet(viewsets.ModelViewSet):
-#     queryset = AuctionHasAsset.objects.all()
-#     serializer_class = AuctionHasAssetSerializer
-#     permission_classes = [permissions.IsAuthenticated]
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        contract = self.get_object()
+        contract.update_status()
+        return Response({'status': 'Contract status updated'})
 
-# class BidViewSet(viewsets.ModelViewSet):
-#     queryset = Bid.objects.all()
-#     serializer_class = BidSerializer
-#     permission_classes = [permissions.IsAuthenticated]
+class ContractFeeViewSet(viewsets.ModelViewSet):
+    queryset = ContractFee.objects.all()
+    serializer_class = ContractFeeSerializer
+    permission_classes = [IsStaffUser]
 
-#     def perform_create(self, serializer):
-#         bid = serializer.save(id_user=self.request.user)
-#         auction_has_asset = bid.id_auction_has_asset
-#         if bid.bid_amount > auction_has_asset.current_price:
-#             auction_has_asset.current_price = bid.bid_amount
-#             auction_has_asset.save()
+    @action(detail=True, methods=['post'])
+    def update_amount(self, request, pk=None):
+        contract_fee = self.get_object()
+        contract_fee.update_amount()
+        return Response({'status': 'Contract fee amount updated'})
 
-#     @action(detail=False, methods=['get'])
-#     def my_bids(self, request):
-#         bids = Bid.objects.filter(id_user=request.user)
-#         serializer = self.get_serializer(bids, many=True)
-#         return Response(serializer.data)
+class ContractTaxViewSet(viewsets.ModelViewSet):
+    queryset = ContractTax.objects.all()
+    serializer_class = ContractTaxSerializer
+    permission_classes = [IsStaffUser]
 
-# class FeeViewSet(viewsets.ModelViewSet):
-#     queryset = Fee.objects.all()
-#     serializer_class = FeeSerializer
-#     permission_classes = [IsAdminUser | IsStaffUser]
+    @action(detail=True, methods=['post'])
+    def update_amount(self, request, pk=None):
+        contract_tax = self.get_object()
+        contract_tax.update_amount()
+        return Response({'status': 'Contract tax amount updated'})
 
-# class ContractViewSet(viewsets.ModelViewSet):
-#     queryset = Contract.objects.all()
-#     serializer_class = ContractSerializer
-#     permission_classes = [IsAdminUser | IsStaffUser]
+class TransactionHistoryViewSet(viewsets.ModelViewSet):
+    queryset = TransactionHistory.objects.all()
+    serializer_class = TransactionHistorySerializer
+    permission_classes = [IsStaffUser]
 
-# class TaxViewSet(viewsets.ModelViewSet):
-#     queryset = Tax.objects.all()
-#     serializer_class = TaxSerializer
-#     permission_classes = [IsAdminUser]
-
-# class TaxHasContractViewSet(viewsets.ModelViewSet):
-#     queryset = TaxHasContract.objects.all()
-#     serializer_class = TaxHasContractSerializer
-#     permission_classes = [IsAdminUser | IsStaffUser]
-    
-# # class TransactionHistoryViewSet(viewsets.ModelViewSet):
-# #     serializer_class = TransactionHistorySerializer
-
-# #     def get_permissions(self):
-# #         if self.action in ['list', 'retrieve']:
-# #             permission_classes = [IsAuthenticated]
-# #         else:
-# #             permission_classes = [IsAdminUser]
-# #         return [permission() for permission in permission_classes]
-
-# #     def get_queryset(self):
-# #         if self.request.user.is_authenticated:
-# #             if self.request.user.is_staff:
-# #                 return TransactionHistory.objects.all()
-# #             return TransactionHistory.objects.filter(id_user=self.request.user)
-# #         return TransactionHistory.objects.none()
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return TransactionHistory.objects.all()
+        return TransactionHistory.objects.filter(user=self.request.user)

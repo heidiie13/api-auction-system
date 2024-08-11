@@ -48,10 +48,9 @@ class User(AbstractUser):
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True)
-    credibility = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     identification_card = models.CharField(max_length=50, blank=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = CustomUserManager()
 
@@ -73,31 +72,28 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.email
+        return f"{self.first_name} {self.last_name}"
 
 
 class Notification(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
-
-    users = models.ManyToManyField(
-        User, through='UserNotification', related_name='notifications')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
 
 
 class UserNotification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name='user_notifications')
     is_read = models.BooleanField(default=False)
-    read_date = models.DateTimeField(null=True, blank=True)
-    sent_date = models.DateTimeField()
+    read_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField()
     
     class Meta:
-        ordering = ['-sent_date']
+        ordering = ['-sent_at']
         
     def __str__(self):
-        return f"{self.user.email} - {self.notification.title}"
+        return f"{self.user} - {self.notification.title}"

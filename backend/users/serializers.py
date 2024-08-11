@@ -8,15 +8,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
-
-
-class StaffUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['email','first_name', 'last_name', 'role', 'date_of_birth', 'phone', 'another_phone',  'identification_card',
-                  'gender', 'country', 'city', 'state', 'avatar', 'created_date', 'modified_date', 'is_active']
-        read_only_fields = ['email', 'role', 'created_date', 'modified_date', 'is_active']
-
+        read_only_fields = ['id','created_at', 'updated_at']
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,10 +16,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'last_name', 'role', 'date_of_birth', 'phone',
             'another_phone', 'gender', 'country', 'city', 'state', 'avatar',
-            'credibility', 'identification_card', 'created_date', 'modified_date', 'is_active'
+            'identification_card', 'created_at', 'updated_at', 'is_active'
         ]
-        read_only_fields = ['id', 'role', 'credibility',
-                            'created_date', 'modified_date', 'is_active']
+        read_only_fields = ['id', 'role', 'created_at', 'updated_at', 'is_active']
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -43,7 +34,7 @@ class SignUpSerializer(serializers.ModelSerializer):
             'last_name': {'required': True},
             'password': {'write_only': True, 'required': True, 'validators': [validate_password]}
         }
-
+    
     def validate(self, attrs):
         if attrs['password'] != attrs['confirm_password']:
             raise serializers.ValidationError(
@@ -103,8 +94,8 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'title', 'content',
-                  'created_date', 'modified_date']
-        read_only_fields = ['id', 'created_date', 'modified_date']
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class UserNotificationSerializer(serializers.ModelSerializer):
@@ -112,5 +103,5 @@ class UserNotificationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserNotification
-        fields = ['id', 'notification', 'is_read', 'read_date', 'sent_date']
-        read_only_fields = ['sent_date',]
+        fields = ['id', 'notification', 'is_read', 'read_at', 'sent_at']
+        read_only_fields = ['id', 'sent_at']
