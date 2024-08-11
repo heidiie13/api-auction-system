@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.db import models
 from users.models import User
-from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMediaType
+from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMediaType, AssetCategory
 
 class Appraiser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
@@ -17,8 +17,9 @@ class Appraiser(models.Model):
 class Asset(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
-    asset_type = models.CharField(max_length=255)
+    category = models.CharField(max_length=100, choices=AssetCategory.choice)
     size = models.CharField(max_length=100)
+    warehouse = models.CharField(max_length=255)
     origin = models.CharField(max_length=255)
     status = models.CharField(
         max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING
