@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Appraiser, Asset, AssetMedia, WareHouse
+from .models import Appraiser, Asset, AssetMedia #, WareHouse
 
 class AppraiserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -18,13 +18,13 @@ class AssetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Asset
-        fields = ['id', 'name', 'description', 'asset_type', 'size', 'origin', 'status', 'appraise_status', 
+        fields = ['id', 'name', 'description', 'category', 'size', 'origin', 'status', 'appraise_status', 
                   'initial_price', 'quantity', 'seller', 'winner', 'warehouse', 'appraiser', 'appraised_value', 
                   'appraisal_date', 'created_date', 'modified_date', 'media']
         read_only_fields = ['id', 'created_date', 'modified_date']
     
-class WareHouseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WareHouse
-        fields = ['id', 'name', 'address', 'capacity', 'current_occupancy', 'is_active', 'created_date', 'modified_date']
-        read_only_fields = ['id', 'created_date', 'modified_date']
+# class WareHouseSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = WareHouse
+#         fields = ['id', 'name', 'address', 'capacity', 'current_occupancy', 'is_active', 'created_date', 'modified_date']
+#         read_only_fields = ['id', 'created_date', 'modified_date']

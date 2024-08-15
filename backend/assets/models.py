@@ -43,9 +43,9 @@ class Asset(models.Model):
         blank=True,
         related_name="won_assets",
     )
-    warehouse = models.ForeignKey(
-        "WareHouse", on_delete=models.SET_NULL, null=True, blank=True
-    )
+    # warehouse = models.ForeignKey(
+    #     "WareHouse", on_delete=models.SET_NULL, null=True, blank=True
+    # )
     appraiser = models.ForeignKey(
         Appraiser,
         on_delete=models.SET_NULL,
@@ -78,14 +78,14 @@ class AssetMedia(models.Model):
     def __str__(self):
         return f"{self.asset.name} - {self.get_media_type_display()}"
 
-class WareHouse(models.Model):
-    name = models.CharField(max_length=255)
-    address = models.TextField()
-    capacity = models.PositiveIntegerField()
-    current_occupancy = models.PositiveIntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+# class WareHouse(models.Model):
+#     name = models.CharField(max_length=255)
+#     address = models.TextField()
+#     capacity = models.PositiveIntegerField()
+#     current_occupancy = models.PositiveIntegerField(default=0)
+#     is_active = models.BooleanField(default=True)
+#     created_date = models.DateTimeField(auto_now_add=True)
+#     modified_date = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
+#     def __str__(self):
+#         return self.name
