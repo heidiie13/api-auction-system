@@ -4,11 +4,11 @@ from users.models import User
 from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMediaType, AssetCategory
 
 class Appraiser(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
+    user_id = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
     experiences = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    update_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Appraiser: {self.user.first_name} {self.user.last_name}"
@@ -24,41 +24,35 @@ class Asset(models.Model):
     status = models.CharField(
         max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING
     )
-    appraise_status = models.CharField(
-        max_length=50,
-        choices=AssetAppraisalStatus.choices,
-        default=AssetAppraisalStatus.NOT_APPRAISED,
-    )
-    initial_price = models.DecimalField(
-        max_digits=12, decimal_places=2, default=Decimal("0.00")
-    )
     quantity = models.PositiveIntegerField(default=1)
-    seller = models.ForeignKey(
+    seller_id = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="assets_for_sale"
     )
-    winner = models.ForeignKey(
+    winner_id = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="won_assets",
     )
-    # warehouse = models.ForeignKey(
-    #     "WareHouse", on_delete=models.SET_NULL, null=True, blank=True
-    # )
-    appraiser = models.ForeignKey(
+    appraiser_id = models.ForeignKey(
         Appraiser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="appraised_assets",
     )
+    appraise_status = models.CharField(
+        max_length=50,
+        choices=AssetAppraisalStatus.choices,
+        default=AssetAppraisalStatus.NOT_APPRAISED,
+    )
     appraised_value = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True
     )
-    appraisal_date = models.DateTimeField(null=True, blank=True)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    appraisal_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    update_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -72,20 +66,9 @@ class AssetMedia(models.Model):
     media_type = models.CharField(max_length=20, choices=AssetMediaType.choices)
     file = models.FileField(upload_to=asset_media_upload_to)
     is_primary = models.BooleanField(default=False)
-    created_date = models.DateTimeField(auto_now_add=True)
-    modified_date = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.asset.name} - {self.get_media_type_display()}"
 
-# class WareHouse(models.Model):
-#     name = models.CharField(max_length=255)
-#     address = models.TextField()
-#     capacity = models.PositiveIntegerField()
-#     current_occupancy = models.PositiveIntegerField(default=0)
-#     is_active = models.BooleanField(default=True)
-#     created_date = models.DateTimeField(auto_now_add=True)
-#     modified_date = models.DateTimeField(auto_now=True)
-
-#     def __str__(self):
-#         return self.name
