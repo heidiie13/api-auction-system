@@ -5,8 +5,8 @@ from .enums import AssetMediaType
 class AppraiserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appraiser
-        fields = ["user_id", "experiences", "status", "created_at", "update_at"]
-        read_only_fields = ["user_id", "created_at", "update_at"]
+        fields = ["user", "experiences", "status", "created_at", "update_at"]
+        read_only_fields = ["user", "created_at", "update_at"]
 
 
 class AssetMediaSerializer(serializers.ModelSerializer):
@@ -23,13 +23,11 @@ class AssetMediaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-
+    
+    
 class AssetSerializer(serializers.ModelSerializer):
     media = AssetMediaSerializer(many=True, read_only=True)
-    seller_id = serializers.PrimaryKeyRelatedField(read_only=True)
-    winner_id = serializers.PrimaryKeyRelatedField(read_only=True)
-    appraiser_id = serializers.PrimaryKeyRelatedField(read_only=True)
-
+    
     class Meta:
         model = Asset
         fields = [
@@ -48,8 +46,8 @@ class AssetSerializer(serializers.ModelSerializer):
             "update_at",
             "media",
             "quantity",
-            "seller_id",
-            "winner_id",
-            "appraiser_id",
+            "seller",
+            "winner",
+            "appraiser",
         ]
-        read_only_fields = ["id", "created_at", "update_at"]
+        read_only_fields = ["id", "created_at", "update_at", "appraise_status", "winner", "seller"]

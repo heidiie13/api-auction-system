@@ -26,30 +26,8 @@ class AssetViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
-        serializer.save(seller_id=self.request.user)
+        serializer.save(seller=self.request.user)
 
-    def perform_update(self, serializer):
-        instance = self.get_object()
-        if (
-            instance.seller_id == self.request.user
-            or self.request.user.role == UserRole.ADMIN
-        ):
-            serializer.save()
-        else:
-            raise permissions.PermissionDenied(
-                "You don't have permission to edit this asset."
-            )
-
-    def perform_destroy(self, instance):
-        if (
-            instance.seller_id == self.request.user
-            or self.request.user.role == UserRole.ADMIN
-        ):
-            instance.delete()
-        else:
-            raise permissions.PermissionDenied(
-                "You don't have permission to delete this asset."
-            )
 
     @action(detail=False, methods=["get"])
     def assets_by_category(self, request):
@@ -76,14 +54,14 @@ class AssetViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="sellers/(?P<id_seller>[0-9]+)")
     def assets_by_seller(self, request, id_seller=None):
-        assets = Asset.objects.filter(seller_id=id_seller)
+        assets = Asset.objects.filter(seller=id_seller)
         serializer = self.get_serializer(assets, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="update-status")
     def update_status(self, request, pk=None):
         asset = self.get_object()
-        if asset.seller_id == request.user or request.user.role == UserRole.ADMIN:
+        if asset.seller == request.user or request.user.role == UserRole.ADMIN:
             status = request.data.get("status")
             if status:
                 asset.status = status
@@ -102,7 +80,7 @@ class AssetViewSet(viewsets.ModelViewSet):
     def add_media(self, request, pk=None):
         """Add media to an asset."""
         asset = self.get_object()
-        if asset.seller_id == request.user or request.user.role == UserRole.ADMIN:
+        if asset.seller == request.user or request.user.role == UserRole.ADMIN:
             serializer = AssetMediaSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save(asset=asset)
@@ -117,7 +95,7 @@ class AssetViewSet(viewsets.ModelViewSet):
     def update_media(self, request, pk=None, media_id=None):
         """Update media for an asset."""
         asset = self.get_object()
-        if asset.seller_id == request.user or request.user.role == UserRole.ADMIN:
+        if asset.seller == request.user or request.user.role == UserRole.ADMIN:
             try:
                 media = AssetMedia.objects.get(id=media_id, asset=asset)
             except AssetMedia.DoesNotExist:

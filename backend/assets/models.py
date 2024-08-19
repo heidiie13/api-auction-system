@@ -5,7 +5,7 @@ from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMedi
 from django.core.exceptions import ValidationError
 
 class Appraiser(models.Model):
-    user_id = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
     experiences = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -26,17 +26,17 @@ class Asset(models.Model):
         max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING
     )
     quantity = models.PositiveIntegerField(default=1)
-    seller_id = models.ForeignKey(
+    seller = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="assets_for_sale"
     )
-    winner_id = models.ForeignKey(
+    winner = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="won_assets",
     )
-    appraiser_id = models.ForeignKey(
+    appraiser = models.ForeignKey(
         Appraiser,
         on_delete=models.SET_NULL,
         null=True,
