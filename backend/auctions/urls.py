@@ -1,19 +1,7 @@
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import AuctionViewSet
 
 router = DefaultRouter()
-# router.register('auctions', views.AuctionViewSet)
-# router.register('auction-assets', views.AuctionAssetViewSet)
-# router.register('asset-deposits', views.AssetDepositViewSet)
-# router.register('bids', views.BidViewSet)
-# router.register('fees', views.FeeViewSet)
-# router.register('taxes', views.TaxViewSet)
-# router.register('contracts', views.ContractViewSet)
-# router.register('contract-fees', views.ContractFeeViewSet)
-# router.register('contract-taxes', views.ContractTaxViewSet)
-# router.register('transactions', views.TransactionHistoryViewSet)
+# router.register('auctions', AuctionViewSet)
 
-urlpatterns = [
-    path('', include(router.urls)),
-]
+urlpatterns = router.urls
