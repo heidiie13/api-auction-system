@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from .models import Appraiser, Asset, AssetMedia
-from .enums import AssetMediaType
 
 class AppraiserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,6 +29,7 @@ class AssetSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Asset
+
         fields = [
             "id",
             "name",
@@ -51,3 +51,4 @@ class AssetSerializer(serializers.ModelSerializer):
             "appraiser",
         ]
         read_only_fields = ["id", "created_at", "update_at", "appraise_status", "winner", "seller"]
+

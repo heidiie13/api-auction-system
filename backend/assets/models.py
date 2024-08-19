@@ -25,6 +25,7 @@ class Asset(models.Model):
     status = models.CharField(
         max_length=50, choices=AssetStatus.choices, default=AssetStatus.PENDING
     )
+
     quantity = models.PositiveIntegerField(default=1)
     seller = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="assets_for_sale"

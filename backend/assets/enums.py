@@ -21,15 +21,11 @@ class AssetMediaType(models.TextChoices):
 
 
 class AssetCategory(models.TextChoices):
-    REAL_ESTATE = "real_estate", "Real Estate"
-    VEHICLES = "vehicles", "Vehicles"
-    ARTWORKS_ANTIQUES_COLLECTIBLES = (
-        "artworks_antiques_collectibles",
-        "Artworks, Antiques, Collectibles",
-    )
-    JEWELRY_LUXURIES = "jewelry_luxuries", "Jewelry, Luxuries"
-    TECHNOLOGY_ELECTRONICS_ENGINEERING = (
-        "technology_electronics_engineering",
-        "Technology, Electronics, Engineering",
-    )
-    OTHERS = "others", "Others"
+
+    REAL_ESTATE = 'real_estate', 'Real Estate'
+    VEHICLES = 'vehicles', 'Vehicles'
+    ARTWORKS_ANTIQUES_COLLECTIBLES = 'artworks_antiques_collectibles', 'Artworks, Antiques, Collectibles'
+    JEWELRY_LUXURIES = 'jewelry_luxuries', 'Jewelry, Luxuries'
+    TECHNOLOGY_ELECTRONICS_ENGINEERING = 'technology_electronics_engineering', 'Technology, Electronics, Engineering'
+    OTHERS = 'others', 'Others'
+
