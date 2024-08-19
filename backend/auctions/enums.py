@@ -1,6 +1,7 @@
 from django.db import models
 
 class AuctionStatus(models.TextChoices):
+    REGISTRATION = 'registration', 'Registration'
     UPCOMING = 'upcoming', 'Upcoming'
     ACTIVE = 'active', 'Active'
     FINISHED = 'finished', 'Finished'
@@ -28,14 +29,3 @@ class FeeType(models.TextChoices):
     INSURANCE = 'insurance', 'Insurance Fee'
     SHIPPING = 'shipping', 'Shipping Fee'
     OTHER = 'other', 'Other Service Fee'
-
-class TransactionType(models.TextChoices):
-    DEPOSIT = 'deposit', 'Deposit'
-    WITHDRAWAL = 'withdrawal', 'Withdrawal'
-    AUCTION_PAYMENT = 'auction_payment', 'Auction Payment'
-    REFUND = 'refund', 'Refund'
-
-class TransactionStatus(models.TextChoices):
-    PENDING = 'pending', 'Pending'
-    COMPLETED = 'completed', 'Completed'
-    FAILED = 'failed', 'Failed'

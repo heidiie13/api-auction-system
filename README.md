@@ -50,10 +50,8 @@ This is the backend for the American Auction system, built with Django Rest Fram
     docker-compose up
 5. Access the application:
 
-    http://localhost:8000
+    http://127.0.0.1:8000/
 
-6. Access API docs (Swagger), Admin site:
+6. Access API docs (Swagger):
 
     http://127.0.0.1:8000/swagger/
-
-    http://127.0.0.1:8000/admin/
