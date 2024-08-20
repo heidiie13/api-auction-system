@@ -16,7 +16,6 @@ class AssetMediaSerializer(serializers.ModelSerializer):
             "asset",
             "media_type",
             "file",
-            "is_primary",
             "created_at",
             "updated_at",
         ]

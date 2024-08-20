@@ -18,7 +18,7 @@ class Appraiser(models.Model):
 class Asset(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
-    category = models.CharField(max_length=100, choices=AssetCategory.choices, default=AssetCategory.OTHERS)
+    category = models.CharField(max_length=100, choices=AssetCategory.choices)
     size = models.CharField(max_length=100)
     warehouse = models.CharField(max_length=255)
     origin = models.CharField(max_length=255)
@@ -67,23 +67,5 @@ class AssetMedia(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='media')
     media_type = models.CharField(max_length=20, choices=AssetMediaType.choices)
     file = models.FileField(upload_to=asset_media_upload_to)
-    is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
-    def clean(self):
-        super().clean()
-
-        if self.media_type == AssetMediaType.VIDEO:
-            if AssetMedia.objects.filter(asset=self.asset, media_type=AssetMediaType.VIDEO).exclude(id=self.id).exists():
-                raise ValidationError("An asset can only have one video.")
-        
-        if self.media_type == AssetMediaType.IMAGE:
-            image_count = AssetMedia.objects.filter(asset=self.asset, media_type=AssetMediaType.IMAGE).count()
-            if image_count >= 12 and (self.id is None or not AssetMedia.objects.filter(id=self.id, media_type=AssetMediaType.IMAGE).exists()):
-                raise ValidationError("An asset can have a maximum of 12 images.")
-            if image_count < 3 and (self.id is None or not AssetMedia.objects.filter(id=self.id, media_type=AssetMediaType.IMAGE).exists()):
-                raise ValidationError("An asset must have at least 3 images.")
-
-    def __str__(self):
-        return f"{self.asset.name} - {self.get_media_type_display()}"

@@ -27,8 +27,8 @@ class AssetViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
-
-
+    
+    @permissions.IsAuthenticated
     @action(detail=False, methods=["get"])
     def assets_by_category(self, request):
         assets = Asset.objects.all()
