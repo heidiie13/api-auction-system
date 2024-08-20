@@ -1,118 +1,187 @@
-from rest_framework import viewsets, permissions, status
+from django.forms import ValidationError
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Count
+from django.db.models import Q
+from django.utils import timezone
+from backend.assets.permissions import (
+    AssetMediaPermission,
+    AssetPermission,
+)
 from .models import Asset, Appraiser, AssetMedia
-from .serializers import AssetSerializer, AppraiserSerializer, AssetMediaSerializer
+from .serializers import (
+    AppraiserSerializer,
+    AssetMediaSerializer,
+    AssetSerializer,
+    AssetAppraisalSerializer,
+)
+from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus
 from users.permissions import IsAdminUser, IsStaffUser
-from users.enums import UserRole
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import PermissionDenied
+
+
+class AssetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class AssetViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing assets."""
-
     queryset = Asset.objects.all()
     serializer_class = AssetSerializer
+    permission_classes = [AssetPermission]
+    pagination_class = AssetPagination
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["category", "status"]
+    ordering_fields = ["created_at", "name"]
+    ordering = ["-created_at"]
 
-    def get_permissions(self):
-        if self.action in ["list", "retrieve", "create"]:
-            permission_classes = [permissions.IsAuthenticated]
-        elif self.action in ["update", "partial_update", "destroy", "update_status"]:
-            permission_classes = [permissions.IsAuthenticated]
-        elif self.action == "assets_by_seller":
-            permission_classes = [IsStaffUser]
-        else:
-            permission_classes = [permissions.IsAuthenticated]
-        return [permission() for permission in permission_classes]
+    def get_queryset(self):
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return Asset.objects.all()
+        return Asset.objects.filter(seller=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
-    
-    @permissions.IsAuthenticated
-    @action(detail=False, methods=["get"])
-    def assets_by_category(self, request):
-        assets = Asset.objects.all()
-        serializer = self.get_serializer(assets, many=True)
-        return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="category/(?P<category>[^/]+)")
-    def assets_by_specific_category(self, request, category=None):
-        assets = Asset.objects.filter(category=category)
-        serializer = self.get_serializer(assets, many=True)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=["get"])
-    def category_assets_count(self, request):
-        category_counts = Asset.objects.values("category").annotate(
-            asset_count=Count("id")
-        )
-        data = [
-            {"category": item["category"], "count": item["asset_count"]}
-            for item in category_counts
-        ]
-        return Response(data)
-
-    @action(detail=False, methods=["get"], url_path="sellers/(?P<id_seller>[0-9]+)")
-    def assets_by_seller(self, request, id_seller=None):
-        assets = Asset.objects.filter(seller=id_seller)
-        serializer = self.get_serializer(assets, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=["patch"], url_path="update-status")
-    def update_status(self, request, pk=None):
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def register_for_auction(self, request, pk=None):
         asset = self.get_object()
-        if asset.seller == request.user or request.user.role == UserRole.ADMIN:
-            status = request.data.get("status")
-            if status:
-                asset.status = status
-                asset.save()
-                return Response({"status": "Asset status updated"})
+        if (
+            asset.appraise_status != AssetAppraisalStatus.NOT_APPRAISED
+            and asset.status != AssetStatus.PENDING
+        ):
             return Response(
-                {"status": "Failed to update asset status"},
+                {"error": "This asset is not available for auction registration."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        else:
-            raise permissions.PermissionDenied(
-                "You don't have permission to update this asset's status."
+
+        if asset.appraiser:
+            return Response(
+                {"error": "This asset already has an appraiser assigned."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-    @action(detail=True, methods=["post"], url_path="add-media")
-    def add_media(self, request, pk=None):
-        """Add media to an asset."""
+        appraiser = Appraiser.objects.filter(status=AppraiserStatus.INACTIVE).first()
+        if not appraiser:
+            return Response(
+                {"error": "No inactive appraiser available."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        asset.appraise_status = AssetAppraisalStatus.UNDER_APPRAISAL
+        asset.appraiser = appraiser
+        asset.save()
+
+        appraiser.status = AppraiserStatus.ACTIVE
+        appraiser.save()
+
+        return Response(
+            {"message": "Asset registered for auction and appraiser assigned."},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["patch"],
+        permission_classes=[permissions.IsAuthenticated],
+        serializer_class=AssetAppraisalSerializer,
+    )
+    def update_appraisal(self, request, pk=None):
         asset = self.get_object()
-        if asset.seller == request.user or request.user.role == UserRole.ADMIN:
-            serializer = AssetMediaSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save(asset=asset)
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
-        else:
-            raise permissions.PermissionDenied(
-                "You don't have permission to add media to this asset."
+        if not (request.user.appraiser_profile == asset.appraiser):
+            return Response(
+                {"error": "You are not the assigned appraiser for this asset."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-    @action(detail=True, methods=["put"], url_path="update-media/(?P<media_id>[0-9]+)")
-    def update_media(self, request, pk=None, media_id=None):
-        """Update media for an asset."""
+        if asset.appraise_status in [
+            AssetAppraisalStatus.APPRAISAL_SUCCESSFUL,
+            AssetAppraisalStatus.APPRAISAL_FAILED,
+        ]:
+            return Response(
+                {
+                    "error": "This asset's appraisal has been completed and cannot be modified."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if asset.status != AssetStatus.PENDING:
+            return Response(
+                {"error": "This asset cannot be modified."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = AssetAppraisalSerializer(asset, data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def complete_appraisal_successful(self, request, pk=None):
         asset = self.get_object()
-        if asset.seller == request.user or request.user.role == UserRole.ADMIN:
-            try:
-                media = AssetMedia.objects.get(id=media_id, asset=asset)
-            except AssetMedia.DoesNotExist:
-                return Response(
-                    {"error": "Media not found or does not belong to this asset."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-
-            serializer = AssetMediaSerializer(media, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            raise permissions.PermissionDenied(
-                "You don't have permission to update media for this asset."
+        if not (request.user.appraiser_profile == asset.appraiser):
+            return Response(
+                {"error": "You are not the assigned appraiser for this asset."},
+                status=status.HTTP_403_FORBIDDEN,
             )
+
+        if asset.appraise_status == AssetAppraisalStatus.APPRAISAL_SUCCESSFUL:
+            return Response(
+                {"error": "This asset has already been successfully appraised."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        asset.appraise_status = AssetAppraisalStatus.APPRAISAL_SUCCESSFUL
+        asset.appraisal_at = timezone.now()
+        asset.save()
+
+        appraiser = request.user.appraiser_profile
+        appraiser.status = AppraiserStatus.ACTIVE
+        appraiser.save()
+
+        return Response(
+            {"message": "Appraisal completed successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def complete_appraisal_failed(self, request, pk=None):
+        asset = self.get_object()
+        if not (request.user.appraiser_profile == asset.appraiser):
+            return Response(
+                {"error": "You are not the assigned appraiser for this asset."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if asset.appraise_status == AssetAppraisalStatus.APPRAISAL_FAILED:
+            return Response(
+                {"error": "This asset has already been marked as appraisal failed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        asset.appraise_status = AssetAppraisalStatus.APPRAISAL_FAILED
+        asset.appraised_value = None
+        asset.appraisal_at = timezone.now()
+        asset.save()
+
+        appraiser = request.user.appraiser_profile
+        appraiser.status = AppraiserStatus.ACTIVE
+        appraiser.save()
+
+        return Response(
+            {"message": "Appraisal marked as failed."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AppraiserViewSet(viewsets.ModelViewSet):
@@ -122,26 +191,105 @@ class AppraiserViewSet(viewsets.ModelViewSet):
     serializer_class = AppraiserSerializer
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
-            permission_classes = [permissions.IsAuthenticated]
-        elif self.action in ["create", "update", "partial_update", "destroy"]:
-            permission_classes = [IsAdminUser]
-        else:
-            permission_classes = [permissions.IsAuthenticated]
-        return [permission() for permission in permission_classes]
-
-
-class AssetMediaViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing asset media."""
-
-    queryset = AssetMedia.objects.all()
-    serializer_class = AssetMediaSerializer
-
-    def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
-            permission_classes = [permissions.IsAuthenticated]
-        elif self.action in ["create", "update", "partial_update", "destroy"]:
+        if self.action in [
+            "list",
+            "retrieve",
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+        ]:
             permission_classes = [IsStaffUser]
         else:
             permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
+
+    @action(
+        detail=True,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated],
+        serializer_class=AssetSerializer,
+    )
+    def current_asset_assignment(self, request, pk=None):
+        appraiser = self.get_object()
+        if request.user.appraiser_profile != appraiser:
+            return Response(
+                {"error": "You can only view your own assignments."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        current_asset = Asset.objects.filter(
+            appraiser=appraiser,
+            appraise_status=AssetAppraisalStatus.NOT_APPRAISED,
+        ).first()
+
+        if current_asset:
+            serializer = AssetSerializer(current_asset)
+            return Response(serializer.data)
+        else:
+            return Response(
+                {"message": "You have no current assignments."},
+                status=status.HTTP_200_OK,
+            )
+
+
+class AssetMediaPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class AssetMediaViewSet(viewsets.ModelViewSet):
+    queryset = AssetMedia.objects.all()
+    serializer_class = AssetMediaSerializer
+    permission_classes = [AssetMediaPermission]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ["media_type"]
+    ordering_fields = ["created_at", "updated_at"]
+    ordering = ["-created_at"]
+    pagination_class = AssetMediaPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return AssetMedia.objects.all()
+        return AssetMedia.objects.filter(asset__seller=user)
+
+    def perform_create(self, serializer):
+        asset = serializer.validated_data.get("asset")
+        if not Asset.objects.filter(id=asset.id).exists():
+            raise ValidationError("The asset does not exist.")
+        if (
+            asset.seller != self.request.user
+            and not self.request.user.is_staff
+            and not self.request.user.is_superuser
+        ):
+            raise PermissionDenied(
+                "You do not have permission to add media to this asset."
+            )
+        if asset.appraise_status != AssetAppraisalStatus.NOT_APPRAISED:
+            if not self.request.user.is_staff and not self.request.user.is_superuser:
+                raise PermissionDenied(
+                    "You do not have permission to add media to an asset that is not yet appraised."
+                )
+        serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        try:
+            response = super().create(request, *args, **kwargs)
+            return response
+        except ValidationError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except PermissionDenied as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except Exception as e:
+            return Response(
+                {"error": "An unknown error occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
