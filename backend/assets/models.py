@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 
 class Appraiser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
-    experiences = models.TextField(null=True, blank=True)
+    experiences = models.TextField()
     status = models.CharField(max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)

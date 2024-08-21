@@ -5,8 +5,8 @@ from .models import Appraiser, Asset, AssetMedia
 class AppraiserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appraiser
-        fields = ["user", "experiences", "status", "created_at", "update_at"]
-        read_only_fields = ["user", "created_at", "update_at"]
+        fields = ["id", "user", "experiences", "status", "created_at", "update_at"]
+        read_only_fields = ["id","created_at", "update_at"]
 
 
 class AssetMediaSerializer(serializers.ModelSerializer):

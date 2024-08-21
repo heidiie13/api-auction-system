@@ -199,10 +199,11 @@ class AppraiserViewSet(viewsets.ModelViewSet):
             "partial_update",
             "destroy",
         ]:
-            permission_classes = [IsStaffUser]
+            permission_classes = [IsStaffUser | IsAdminUser]
         else:
             permission_classes = [permissions.IsAuthenticated]
         return [permission() for permission in permission_classes]
+
 
     @action(
         detail=True,
