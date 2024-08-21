@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from django.utils import timezone
-from backend.assets.permissions import (
+from assets.permissions import (
     AssetMediaPermission,
     AssetPermission,
 )
@@ -274,10 +274,23 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
                 )
         serializer.save()
 
+
     def create(self, request, *args, **kwargs):
+        # Ensure the file is provided in the request
+        if "file" not in request.FILES:
+            return Response(
+                {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Pass the request context to the serializer
+        serializer = self.get_serializer(data=request.data, context={"request": request})
         try:
-            response = super().create(request, *args, **kwargs)
-            return response
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(
+                serializer.data, status=status.HTTP_201_CREATED, headers=headers
+            )
         except ValidationError as e:
             return Response(
                 {"error": str(e)},

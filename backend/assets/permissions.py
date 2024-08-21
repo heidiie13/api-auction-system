@@ -1,5 +1,5 @@
 from rest_framework.permissions import BasePermission
-from backend.assets.enums import AssetAppraisalStatus
+from assets.enums import AssetAppraisalStatus
 from users.permissions import IsStaffUser, IsAdminUser
 
 
