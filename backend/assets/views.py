@@ -66,7 +66,7 @@ class AssetViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        appraiser = Appraiser.objects.filter(status=AppraiserStatus.INACTIVE).first()
+        appraiser = Appraiser.objects.filter(status=AppraiserStatus.ACTIVE).first()
         if not appraiser:
             return Response(
                 {"error": "No inactive appraiser available."},
@@ -77,7 +77,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         asset.appraiser = appraiser
         asset.save()
 
-        appraiser.status = AppraiserStatus.ACTIVE
+        appraiser.status = AppraiserStatus.INACTIVE
         appraiser.save()
 
         return Response(
