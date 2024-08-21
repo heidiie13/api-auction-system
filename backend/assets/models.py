@@ -1,13 +1,24 @@
 from decimal import Decimal
 from django.db import models
 from users.models import User
-from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus, AssetMediaType, AssetCategory
+from .enums import (
+    AssetStatus,
+    AppraiserStatus,
+    AssetAppraisalStatus,
+    AssetMediaType,
+    AssetCategory,
+)
 from django.core.exceptions import ValidationError
 
+
 class Appraiser(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='appraiser_profile', primary_key=True)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="appraiser_profile"
+    )
     experiences = models.TextField()
-    status = models.CharField(max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE)
+    status = models.CharField(
+        max_length=50, choices=AppraiserStatus.choices, default=AppraiserStatus.ACTIVE
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     update_at = models.DateTimeField(auto_now=True)
 
@@ -63,8 +74,9 @@ class Asset(models.Model):
 def asset_media_upload_to(instance, filename):
     return f"asset_media/{instance.asset.id}/{filename}"
 
+
 class AssetMedia(models.Model):
-    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='media')
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="media")
     media_type = models.CharField(max_length=20, choices=AssetMediaType.choices)
     file = models.FileField(upload_to=asset_media_upload_to)
     created_at = models.DateTimeField(auto_now_add=True)
