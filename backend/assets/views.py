@@ -36,7 +36,7 @@ class AssetViewSet(viewsets.ModelViewSet):
     pagination_class = AssetPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["category", "status"]
-    ordering_fields = ["created_at", "name"]
+    ordering_fields = ["created_at", "name", "updated_at"]
     ordering = ["-created_at"]
 
     def get_serializer_class(self):

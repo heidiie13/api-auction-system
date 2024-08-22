@@ -6,8 +6,8 @@ from .models import Appraiser, Asset, AssetMedia
 class AppraiserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appraiser
-        fields = ["id", "user", "experiences", "status", "created_at", "update_at"]
-        read_only_fields = ["id", "created_at", "update_at"]
+        fields = ["id", "user", "experiences", "status", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class AssetMediaSerializer(serializers.ModelSerializer):
@@ -72,7 +72,7 @@ class AssetSerializer(serializers.ModelSerializer):
             "appraised_value",
             "appraisal_at",
             "created_at",
-            "update_at",
+            "updated_at",
             "media",
             "quantity",
             "seller",
@@ -82,7 +82,7 @@ class AssetSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "created_at",
-            "update_at",
+            "updated_at",
             "appraise_status",
             "winner",
             "seller",
@@ -111,14 +111,14 @@ class AdminAssetSerializer(serializers.ModelSerializer):
             "appraised_value",
             "appraisal_at",
             "created_at",
-            "update_at",
+            "updated_at",
             "media",
             "quantity",
             "seller",
             "winner",
             "appraiser",
         ]
-        read_only_fields = ["id", "created_at", "update_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class AssetAppraisalSerializer(serializers.ModelSerializer):
