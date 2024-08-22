@@ -50,19 +50,18 @@ class AssetMediaPermission(BasePermission):
         if view.action in ["list", "retrieve"]:
             return (
                 obj.asset.seller == request.user
-                or IsStaffUser().has_permission(request, view)
-                or IsAdminUser().has_permission(request, view)
+                or request.user.is_staff
+                or request.user.is_superuser
             )
         elif view.action in ["update", "partial_update", "destroy"]:
             if obj.asset.appraise_status == AssetAppraisalStatus.NOT_APPRAISED:
                 return (
                     obj.seller == request.user
-                    or IsStaffUser().has_permission(request, view)
-                    or IsAdminUser().has_permission(request, view)
+                    or request.user.is_staff
+                    or request.user.is_superuser
                 )
             else:
                 return IsStaffUser().has_permission(
                     request, view
                 ) or IsAdminUser().has_permission(request, view)
         return False
-
