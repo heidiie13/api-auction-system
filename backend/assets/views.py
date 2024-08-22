@@ -90,7 +90,7 @@ class AssetViewSet(viewsets.ModelViewSet):
             raise permissions.PermissionDenied(
                 "You don't have permission to add media to this asset."
             )
-
+    
     @action(detail=True, methods=["put"], url_path="update-media/(?P<media_id>[0-9]+)")
     def update_media(self, request, pk=None, media_id=None):
         """Update media for an asset."""

@@ -21,3 +21,14 @@ AUCTION_TIME_PERIODS = [
 
 REGISTRATION_START_TIME = '09:00:00'
 REGISTRATION_END_TIME = '17:00:00'
+
+REGISTRATION_FEE = '1000'
+
+DEPOSIT_PERCENTAGES  = {
+    'real_estate': 5,
+    'vehicles': 10,  
+    'artworks_antiques_collectibles': 15,
+    'jewelry_luxuries': 20,  
+    'technology_electronics_engineering': 10,  
+    'others': 15,
+}

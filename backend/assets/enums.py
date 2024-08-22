@@ -19,9 +19,7 @@ class AssetMediaType(models.TextChoices):
     VIDEO = "video", "Video"
     DOCUMENT = "document", "Document"
 
-
 class AssetCategory(models.TextChoices):
-
     REAL_ESTATE = 'real_estate', 'Real Estate'
     VEHICLES = 'vehicles', 'Vehicles'
     ARTWORKS_ANTIQUES_COLLECTIBLES = 'artworks_antiques_collectibles', 'Artworks, Antiques, Collectibles'

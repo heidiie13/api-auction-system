@@ -72,27 +72,3 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
-
-
-class Notification(models.Model):
-    title = models.CharField(max_length=255)
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.title
-
-
-class UserNotification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    notification = models.ForeignKey(Notification, on_delete=models.CASCADE, related_name='user_notifications')
-    is_read = models.BooleanField(default=False)
-    read_at = models.DateTimeField(null=True, blank=True)
-    sent_at = models.DateTimeField()
-    
-    class Meta:
-        ordering = ['-sent_at']
-        
-    def __str__(self):
-        return f"{self.user} - {self.notification.title}"

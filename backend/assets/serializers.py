@@ -50,5 +50,5 @@ class AssetSerializer(serializers.ModelSerializer):
             "winner",
             "appraiser",
         ]
-        read_only_fields = ["id", "created_at", "update_at", "appraise_status", "winner", "seller"]
+        read_only_fields = ["id", "created_at", "update_at", "seller"]
 

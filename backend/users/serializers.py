@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import User, Notification, UserNotification
+from .models import User
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
@@ -46,6 +46,9 @@ class SignUpSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True, write_only=True)
@@ -88,20 +91,3 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(new_password)
         user.save()
         return user
-
-
-class NotificationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notification
-        fields = ['id', 'title', 'content',
-                  'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-
-class UserNotificationSerializer(serializers.ModelSerializer):
-    notification = NotificationSerializer(read_only=True)
-
-    class Meta:
-        model = UserNotification
-        fields = ['id', 'notification', 'is_read', 'read_at', 'sent_at']
-        read_only_fields = ['id', 'sent_at']
