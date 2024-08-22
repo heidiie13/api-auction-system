@@ -30,6 +30,9 @@ class AssetPermission(BasePermission):
                 return IsStaffUser().has_permission(
                     request, view
                 ) or IsAdminUser().has_permission(request, view)
+                
+        elif view.action == "update_appraisal":
+            return request.user.appraiser_profile == obj.appraiser        
         return False
             
 class AssetMediaPermission(BasePermission):
