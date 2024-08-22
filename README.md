@@ -15,11 +15,11 @@ This is the backend for the American Auction system, built with Django Rest Fram
 
 1. Clone the project:
    ```sh
-   git clone https://github.com/MockProject052024Nhom6/MockProject_052024_Group6.git
+   git clone https://github.com/heidiie13/Backend-APIs-Auction-system.git
 
-   cd MockProject_052024_Group6
+   cd Backend-APIs-Auction-system
 
-   git checkout dev-python
+   git checkout main
 
    cd backend
 2. Environment Variables:
