@@ -22,6 +22,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 
 class AssetReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Asset.objects.filter(status=AssetStatus.IN_AUCTION)
     serializer_class = AssetReadOnlySerializer
     permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
@@ -29,10 +30,6 @@ class AssetReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ["created_at", "name", "updated_at"]
     ordering = ["-created_at"]
     search_fields = ["name"]
-
-    def get_queryset(self):
-        return Asset.objects.filter(status=AssetStatus.IN_AUCTION)
-
 
 class AssetViewSet(viewsets.ModelViewSet):
     queryset = Asset.objects.all()
@@ -51,6 +48,8 @@ class AssetViewSet(viewsets.ModelViewSet):
         return AssetSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Asset.objects.none()
         user = self.request.user
         if user.is_staff or user.is_superuser:
             return Asset.objects.all()
@@ -266,11 +265,13 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return AssetMedia.objects.none()
         user = self.request.user
         if user.is_staff or user.is_superuser:
             return AssetMedia.objects.all()
         return AssetMedia.objects.filter(asset__seller=user)
-
+    
     def perform_create(self, serializer):
         asset = serializer.validated_data.get("asset")
         if not Asset.objects.filter(id=asset.id).exists():
@@ -299,7 +300,7 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
         ).count()
 
         if media_type == AssetMediaType.IMAGE:
-            if existing_media_count >= 3:
+            if existing_media_count >= 20:
                 raise ValidationError("This asset already has the maximum number of images (20).")
         elif media_type == AssetMediaType.VIDEO:
             if existing_media_count >= 10:

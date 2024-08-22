@@ -180,10 +180,12 @@ class AuctionViewSet(viewsets.ModelViewSet):
 
         return registration_start_at, registration_end_at, start_at, end_at
 
-class AuctionAssetReadViewSet(viewsets.ReadOnlyModelViewSet):
+class AuctionAssetReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuctionAssetSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return AuctionAsset.objects.none()
         auction_id = self.kwargs.get('auction_pk')
         auction = get_object_or_404(Auction, id=auction_id)
         return AuctionAsset.objects.filter(auction=auction)
@@ -258,6 +260,8 @@ class RegistrationFeeViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return RegistrationFee.objects.none()
         if self.request.user.is_staff:
             return super().get_queryset()
         return super().get_queryset().filter(user=self.request.user)
@@ -306,6 +310,8 @@ class AssetDepositViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return RegistrationFee.objects.none()
         if self.request.user.is_staff:
             return super().get_queryset()
         return super().get_queryset().filter(user=self.request.user)
@@ -364,6 +370,8 @@ class ContractViewSet(viewsets.ModelViewSet):
     serializer_class = ContractSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Contract.objects.none()
         user = self.request.user
         if user.is_staff:
             return Contract.objects.all()
