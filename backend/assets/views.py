@@ -10,6 +10,7 @@ from assets.permissions import (
 )
 from .models import Asset, Appraiser, AssetMedia
 from .serializers import (
+    AdminAssetSerializer,
     AppraiserSerializer,
     AssetMediaSerializer,
     AssetSerializer,
@@ -37,6 +38,11 @@ class AssetViewSet(viewsets.ModelViewSet):
     filterset_fields = ["category", "status"]
     ordering_fields = ["created_at", "name"]
     ordering = ["-created_at"]
+
+    def get_serializer_class(self):
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return AdminAssetSerializer
+        return AssetSerializer
 
     def get_queryset(self):
         if self.request.user.is_staff or self.request.user.is_superuser:

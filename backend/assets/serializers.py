@@ -2,11 +2,12 @@ from rest_framework import serializers
 from assets.enums import AssetMediaType
 from .models import Appraiser, Asset, AssetMedia
 
+
 class AppraiserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appraiser
         fields = ["id", "user", "experiences", "status", "created_at", "update_at"]
-        read_only_fields = ["id","created_at", "update_at"]
+        read_only_fields = ["id", "created_at", "update_at"]
 
 
 class AssetMediaSerializer(serializers.ModelSerializer):
@@ -21,15 +22,15 @@ class AssetMediaSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-        
+
     def validate(self, data):
         media_type = data.get("media_type")
-        request = self.context.get('request')
-        
-        if not request or 'file' not in request.FILES:
+        request = self.context.get("request")
+
+        if not request or "file" not in request.FILES:
             raise serializers.ValidationError("No files provided.")
-        
-        files = request.FILES.getlist('file')
+
+        files = request.FILES.getlist("file")
 
         if media_type == AssetMediaType.IMAGE:
             if len(files) < 3 or len(files) > 12:
@@ -47,12 +48,10 @@ class AssetMediaSerializer(serializers.ModelSerializer):
                     "For documents, you must upload at least 1 file."
                 )
         else:
-            raise serializers.ValidationError(
-                "Invalid media type."
-            )
+            raise serializers.ValidationError("Invalid media type.")
 
         return data
-    
+
 
 class AssetSerializer(serializers.ModelSerializer):
     media = AssetMediaSerializer(many=True, read_only=True)
@@ -92,6 +91,34 @@ class AssetSerializer(serializers.ModelSerializer):
             "appraisal_at",
             "appraiser",
         ]
+
+
+class AdminAssetSerializer(serializers.ModelSerializer):
+    media = AssetMediaSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Asset
+        fields = [
+            "id",
+            "name",
+            "description",
+            "category",
+            "size",
+            "warehouse",
+            "origin",
+            "status",
+            "appraise_status",
+            "appraised_value",
+            "appraisal_at",
+            "created_at",
+            "update_at",
+            "media",
+            "quantity",
+            "seller",
+            "winner",
+            "appraiser",
+        ]
+        read_only_fields = ["id", "created_at", "update_at"]
 
 
 class AssetAppraisalSerializer(serializers.ModelSerializer):
