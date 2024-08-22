@@ -6,7 +6,7 @@ router = DefaultRouter()
 router.register("assets", AssetViewSet, basename="assets")
 router.register("appraisers", AppraiserViewSet, basename="appraisers")
 router.register("asset-media", AssetMediaViewSet, basename="asset-media")
-router.register("assets/read-only", AssetReadOnlyViewSet, basename="assets-read")
+router.register("assets-read-only", AssetReadOnlyViewSet, basename="assets-read")
 
 urlpatterns = [
     path("", include(router.urls)),
