@@ -1,6 +1,4 @@
-import os
-from django.conf import settings
-from django.forms import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -18,7 +16,7 @@ from .serializers import (
     AssetSerializer,
     AssetAppraisalSerializer,
 )
-from .enums import AssetMediaType, AssetStatus, AppraiserStatus, AssetAppraisalStatus
+from .enums import AssetMediaType, AssetStatus, AppraiserStatus, AssetAppraisalStatus,AssetMediaType
 from users.permissions import IsAdminUser, IsStaffUser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
@@ -264,16 +262,12 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
             return AssetMedia.objects.all()
         return AssetMedia.objects.filter(asset__seller=user)
 
-    def check_file_count_in_folder(self, folder_path, max_count):
-        if os.path.exists(folder_path):
-            file_count = len([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
-            if file_count >= max_count:
-                raise ValidationError(f"The folder '{folder_path}' already contains {file_count} files, which exceeds the allowed limit of {max_count} files.")
 
     def perform_create(self, serializer):
         asset = serializer.validated_data.get("asset")
         if not Asset.objects.filter(id=asset.id).exists():
             raise ValidationError("The asset does not exist.")
+        
         if (
             asset.seller != self.request.user
             and not self.request.user.is_staff
@@ -282,6 +276,7 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(
                 "You do not have permission to add media to this asset."
             )
+        
         if asset.appraise_status != AssetAppraisalStatus.NOT_APPRAISED:
             if not self.request.user.is_staff and not self.request.user.is_superuser:
                 raise PermissionDenied(
@@ -289,10 +284,23 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
                 )
 
         media_type = serializer.validated_data.get("media_type")
-        folder_path = os.path.join(settings.MEDIA_ROOT, f'asset_media/{asset.id}/{media_type.lower()}')
+        
+        # Check the number of existing media for this asset
+        existing_media_count = AssetMedia.objects.filter(
+            asset=asset,
+            media_type=media_type
+        ).count()
+
         if media_type == AssetMediaType.IMAGE:
-            self.check_file_count_in_folder(folder_path, 20)
+            if existing_media_count >= 3:
+                raise ValidationError("This asset already has the maximum number of images (20).")
         elif media_type == AssetMediaType.VIDEO:
-            self.check_file_count_in_folder(folder_path, 10)
+            if existing_media_count >= 10:
+                raise ValidationError("This asset already has the maximum number of videos (10).")
+        elif media_type == AssetMediaType.DOCUMENT:
+            # You can add a limit for documents if needed
+            pass
+        else:
+            raise ValidationError(f"Invalid media type: {media_type}")
 
         serializer.save()
