@@ -72,8 +72,7 @@ class Asset(models.Model):
 
 
 def asset_media_upload_to(instance, filename):
-    return f"asset_media/{instance.asset.id}/{filename}"
-
+    return f"asset_media/{instance.asset.id}/{instance.media_type}/{filename}"
 
 class AssetMedia(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="media")

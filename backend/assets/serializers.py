@@ -23,6 +23,13 @@ class AssetMediaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
+    def validate_file_extension(self, file, valid_extensions):
+        ext = file.name.split(".")[-1].lower()
+        if ext not in valid_extensions:
+            raise serializers.ValidationError(
+                f"File extension '{ext}' is not allowed for this media type."
+            )
+
     def validate(self, data):
         media_type = data.get("media_type")
         request = self.context.get("request")
@@ -33,22 +40,39 @@ class AssetMediaSerializer(serializers.ModelSerializer):
         files = request.FILES.getlist("file")
 
         if media_type == AssetMediaType.IMAGE:
-            if len(files) < 3 or len(files) > 12:
+            if len(files) != 1:
                 raise serializers.ValidationError(
-                    "For images, you must upload between 3 and 12 files."
+                    "For images, you must upload exactly 1 file."
                 )
+            valid_extensions = ["jpeg", "jpg", "png", "gif", "bmp", "tiff", "svg"]
         elif media_type == AssetMediaType.VIDEO:
             if len(files) != 1:
                 raise serializers.ValidationError(
                     "For videos, you must upload exactly 1 file."
                 )
+            valid_extensions = ["mp4", "avi", "mov", "mkv", "wmv", "flv"]
         elif media_type == AssetMediaType.DOCUMENT:
-            if len(files) < 1:
+            if len(files) != 1:
                 raise serializers.ValidationError(
-                    "For documents, you must upload at least 1 file."
+                    "For documents, you must upload exactly 1 file."
                 )
+            valid_extensions = [
+                "doc",
+                "docx",
+                "pdf",
+                "txt",
+                "rtf",
+                "odt",
+                "ppt",
+                "pptx",
+                "xls",
+                "xlsx",
+            ]
         else:
             raise serializers.ValidationError("Invalid media type.")
+
+        for file in files:
+            self.validate_file_extension(file, valid_extensions)
 
         return data
 

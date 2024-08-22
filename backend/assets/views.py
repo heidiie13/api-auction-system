@@ -1,3 +1,5 @@
+import os
+from django.conf import settings
 from django.forms import ValidationError
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
@@ -16,7 +18,7 @@ from .serializers import (
     AssetSerializer,
     AssetAppraisalSerializer,
 )
-from .enums import AssetStatus, AppraiserStatus, AssetAppraisalStatus
+from .enums import AssetMediaType, AssetStatus, AppraiserStatus, AssetAppraisalStatus
 from users.permissions import IsAdminUser, IsStaffUser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
@@ -262,6 +264,12 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
             return AssetMedia.objects.all()
         return AssetMedia.objects.filter(asset__seller=user)
 
+    def check_file_count_in_folder(self, folder_path, max_count):
+        if os.path.exists(folder_path):
+            file_count = len([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
+            if file_count >= max_count:
+                raise ValidationError(f"The folder '{folder_path}' already contains {file_count} files, which exceeds the allowed limit of {max_count} files.")
+
     def perform_create(self, serializer):
         asset = serializer.validated_data.get("asset")
         if not Asset.objects.filter(id=asset.id).exists():
@@ -279,37 +287,12 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied(
                     "You do not have permission to add media to an asset that is not yet appraised."
                 )
+
+        media_type = serializer.validated_data.get("media_type")
+        folder_path = os.path.join(settings.MEDIA_ROOT, f'asset_media/{asset.id}/{media_type.lower()}')
+        if media_type == AssetMediaType.IMAGE:
+            self.check_file_count_in_folder(folder_path, 20)
+        elif media_type == AssetMediaType.VIDEO:
+            self.check_file_count_in_folder(folder_path, 10)
+
         serializer.save()
-
-
-    def create(self, request, *args, **kwargs):
-        # Ensure the file is provided in the request
-        if "file" not in request.FILES:
-            return Response(
-                {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Pass the request context to the serializer
-        serializer = self.get_serializer(data=request.data, context={"request": request})
-        try:
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED, headers=headers
-            )
-        except ValidationError as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        except PermissionDenied as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-        except Exception as e:
-            return Response(
-                {"error": "An unknown error occurred."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
