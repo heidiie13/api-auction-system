@@ -8,13 +8,13 @@ from assets.enums import AssetCategory
 
 class Auction(models.Model):
     name = models.CharField(max_length=255)
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField()
     registration_start_at = models.DateTimeField()
     registration_end_at = models.DateTimeField()
     category = models.CharField(max_length=100, choices=AssetCategory.choices)
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=AuctionStatus.choices, default=AuctionStatus.REGISTRATION)
+    status = models.CharField(max_length=20, choices=AuctionStatus.choices)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -22,8 +22,8 @@ class Auction(models.Model):
         return self.name
 
 class AuctionAsset(models.Model):
-    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='assets')
-    asset = models.OneToOneField(Asset, on_delete=models.CASCADE, related_name='auction_entry')
+    auction = models.ForeignKey(Auction, on_delete=models.CASCADE, related_name='auction_assets')
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='auction_assets')
     start_at = models.DateTimeField(null=True, blank=True)
     end_at = models.DateTimeField(null=True, blank=True)
     starting_price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -33,6 +33,9 @@ class AuctionAsset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        unique_together = ('auction', 'asset')
+        
     def __str__(self):
         return f"{self.asset.name} in {self.auction.name}"
 
@@ -69,9 +72,6 @@ class Bid(models.Model):
     is_current_highest = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ('user', 'auction_asset')
         
     def __str__(self):
         return f"Bid of {self.amount} by {self.user} for {self.auction_asset.asset.name}"
@@ -79,9 +79,9 @@ class Bid(models.Model):
 class Fee(models.Model):
     name = models.CharField(max_length=255)
     fee_type = models.CharField(max_length=50, choices=FeeType.choices)
-    is_percentage = models.BooleanField(default=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    description = models.TextField(blank=True)
+    is_percentage = models.BooleanField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -91,9 +91,9 @@ class Fee(models.Model):
 class Tax(models.Model):
     name = models.CharField(max_length=255)
     tax_type = models.CharField(max_length=50, choices=TaxType.choices)
-    is_percentage = models.BooleanField(default=True)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    description = models.TextField(blank=True)
+    is_percentage = models.BooleanField()
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -105,11 +105,11 @@ class Contract(models.Model):
     auction_asset = models.OneToOneField(AuctionAsset, on_delete=models.CASCADE, related_name='contract')
     winner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='won_contracts')
     seller = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sold_contracts')
-    status = models.CharField(max_length=20, choices=ContractStatus.choices, default=ContractStatus.PENDING)
-    total_fees = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    total_taxes = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    winner_amount_due = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    seller_amount_due = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=ContractStatus.choices)
+    total_fees = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    total_taxes = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    winner_amount_due = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
+    seller_amount_due = models.DecimalField(max_digits=15, decimal_places=2, default=Decimal('0.00'))
     winner_payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID)
     seller_payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.UNPAID)
     payment_due_date = models.DateField()
@@ -125,7 +125,7 @@ class Contract(models.Model):
     def calculate_amounts(self):
         self.total_fees = sum(cf.amount for cf in self.contract_fees.all())
         self.total_taxes = sum(ct.amount for ct in self.contract_taxes.all())
-        self.winner_amount_due = self.auction_asset.final_price + self.total_taxes - self.winner.deposits.amount
+        self.winner_amount_due = self.auction_asset.final_price + self.total_taxes - self.winner.deposits.filter(auction_asset=self.auction_asset).first().amount
         self.seller_amount_due = self.total_fees
         self.save()
 

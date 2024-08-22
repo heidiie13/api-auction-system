@@ -1,13 +1,10 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.routers import DefaultRouter
-from .views import (signup, change_password, request_reset_password, reset_password, login, logout, verify_email, resend_verification_email, UserViewSet, NotificationViewSet, UserNotificationViewSet, UserDetailView)
+from .views import (signup, change_password, request_reset_password, reset_password, login, logout, verify_email, resend_verification_email, UserViewSet, UserDetailView)
 
 router = DefaultRouter()
 router.register('users', UserViewSet, basename='user')
-router.register('notifications', NotificationViewSet, basename='notification')
-router.register('user-notifications', UserNotificationViewSet,
-                basename='user-notification')
 
 urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

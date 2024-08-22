@@ -2,6 +2,7 @@ from django.db import models
 
 class AssetAppraisalStatus(models.TextChoices):
     NOT_APPRAISED = 'not_appraised', 'Not Appraised'
+    UNDER_APPRAISAL = 'under_appraisal', 'Under Appraisal'
     APPRAISAL_SUCCESSFUL = 'appraisal_successful', 'Appraisal Successful'
     APPRAISAL_FAILED = 'appraisal_failed', 'Appraisal Failed'
 
@@ -19,9 +20,7 @@ class AssetMediaType(models.TextChoices):
     VIDEO = "video", "Video"
     DOCUMENT = "document", "Document"
 
-
 class AssetCategory(models.TextChoices):
-
     REAL_ESTATE = 'real_estate', 'Real Estate'
     VEHICLES = 'vehicles', 'Vehicles'
     ARTWORKS_ANTIQUES_COLLECTIBLES = 'artworks_antiques_collectibles', 'Artworks, Antiques, Collectibles'

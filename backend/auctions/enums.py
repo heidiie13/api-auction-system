@@ -8,7 +8,6 @@ class AuctionStatus(models.TextChoices):
     CANCELLED = 'cancelled', 'Cancelled'
 
 class ContractStatus(models.TextChoices):
-    PENDING = 'pending', 'Pending'
     ACTIVE = 'active', 'Active'
     COMPLETED = 'completed', 'Completed'
     CANCELLED = 'cancelled', 'Cancelled'
