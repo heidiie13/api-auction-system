@@ -22,8 +22,8 @@ class AuctionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Auction
         fields = ['id', 'name', 'description', 'category', 'registration_start_date', 'time_period', 'registration_start_at', 'registration_end_at',
-                  'start_at', 'end_at', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'registration_start_at', 'registration_end_at','status',
+                  'start_at', 'end_at','status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'registration_start_at', 'registration_end_at',
                             'start_at', 'end_at', 'auction_assets', 'created_at', 'updated_at']
 
     def validate_registration_start_date(self, value):

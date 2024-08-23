@@ -65,7 +65,9 @@ class AssetViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response({"message": "Asset created successfull", "asset": serializer.data}, status=status.HTTP_201_CREATED, headers=headers)
-
+    def perform_create(self, serializer):
+        return serializer.save(seller=self.request.user)
+    
     @action(
         detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated], url_path="register-for-auction"
     )
@@ -300,10 +302,10 @@ class AssetMediaViewSet(viewsets.ModelViewSet):
         ).count()
 
         if media_type == AssetMediaType.IMAGE:
-            if existing_media_count >= 20:
+            if existing_media_count > 20:
                 raise ValidationError("This asset already has the maximum number of images (20).")
         elif media_type == AssetMediaType.VIDEO:
-            if existing_media_count >= 10:
+            if existing_media_count > 10:
                 raise ValidationError("This asset already has the maximum number of videos (10).")
         elif media_type == AssetMediaType.DOCUMENT:
             pass
