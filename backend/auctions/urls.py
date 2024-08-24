@@ -8,7 +8,7 @@ from .views import (
 router = DefaultRouter()
 router.register('auctions', AuctionViewSet, basename='auction')
 router.register(r'auctions/(?P<auction_pk>\d+)/assets', AuctionAssetReadOnlyViewSet, basename='read-auction-assets')
-# router.register('auction-assets', AuctionAssetViewSet, basename='auction-assets')
+router.register('auction-assets', AuctionAssetViewSet, basename='auction-assets')
 router.register('bids', BidViewSet, basename='bid')
 router.register('contracts', ContractViewSet, basename='contract')
 router.register('taxes', TaxViewSet, basename='tax')
