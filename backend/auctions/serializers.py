@@ -44,7 +44,7 @@ class RegistrationFeeSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'auction', 'amount',
                   'registration_payment_status', 'created_at', 'updated_at']
         read_only_fields = [
-            'id', 'amount', 'registration_payment_status', 'created_at', 'updated_at']
+            'id', 'registration_payment_status', 'created_at', 'updated_at']
 
     def validate_auction(self, value):
         user = self.context.get('user')
