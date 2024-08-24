@@ -44,7 +44,7 @@ This is the backend for the American Auction system, built with Django Rest Fram
 
     ```sh
     docker-compose up --build
-4. Run run the Docker containers (Run server):
+4. Run the Docker containers (Run server):
 
     ```sh
     docker-compose up
