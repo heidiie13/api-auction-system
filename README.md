@@ -15,11 +15,9 @@ This is the backend for the American Auction system, built with Django Rest Fram
 
 1. Clone the project:
    ```sh
-   git clone https://github.com/heidiie13/Backend-APIs-Auction-system.git
+   git clone https://github.com/heidiie13/api-auction-system.git
 
-   cd Backend-APIs-Auction-system
-
-   git checkout main
+   cd api-auction-system
 
    cd backend
 2. Environment Variables:
@@ -48,10 +46,7 @@ This is the backend for the American Auction system, built with Django Rest Fram
 
     ```sh
     docker-compose up
-5. Access the application:
 
-    http://127.0.0.1:8000/
-
-6. Access API docs (Swagger):
+5. Access API docs (Swagger):
 
     http://127.0.0.1:8000/swagger/
